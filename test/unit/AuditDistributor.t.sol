@@ -51,6 +51,7 @@ contract AuditDistributorTest is ExtensionFixture {
         assertEq(d2.stakedBalance(alice), 10_000_000e18 + amount);
         vm.expectRevert(AdamDistributorV2.InvalidSwap.selector);
         d2.claimIMDSTR(oldDue, 1, block.timestamp);
+        vm.warp(d2.unlockTime(alice));
         vm.prank(alice);
         d2.unstake(10_000_000e18 + amount);
         assertEq(adam.balanceOf(alice), 100_000_000e18 + amount);

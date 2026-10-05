@@ -82,7 +82,7 @@ abstract contract ExtensionFixture is LocalV4 {
     function setUp() public virtual override {
         vm.warp(1_800_000_000);
         vm.roll(1000);
-        poolManager = new PoolManager(address(this));
+        poolManager = PoolManager(deployCode("PoolManager.sol:PoolManager", abi.encode(address(this))));
         swapRouter = new PoolSwapTest(poolManager);
         lpRouter = new PoolModifyLiquidityTest(poolManager);
         _deployRewardPools();

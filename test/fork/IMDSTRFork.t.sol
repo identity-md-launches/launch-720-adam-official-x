@@ -15,6 +15,12 @@ import {LaunchToken} from "../../src/LaunchToken.sol";
 import {AdamDistributorV2, IStrategyToken} from "../../src/AdamDistributorV2.sol";
 import {DeployAdamExtension} from "../../script/DeployAdamExtension.s.sol";
 import {DeployAdam} from "../../script/DeployAdam.s.sol";
+import {IPositionManager} from "@uniswap/v4-periphery/src/interfaces/IPositionManager.sol";
+import {Actions} from "@uniswap/v4-periphery/src/libraries/Actions.sol";
+import {PoolSwapTest} from "@uniswap/v4-core/src/test/PoolSwapTest.sol";
+import {SwapParams} from "@uniswap/v4-core/src/types/PoolOperation.sol";
+import {BalanceDelta} from "@uniswap/v4-core/src/types/BalanceDelta.sol";
+import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
 
 interface IStrategyAdmin {
     function owner() external view returns (address);
@@ -42,6 +48,8 @@ contract IMDSTRForkTest is Test {
     PoolKey internal key;
     address internal alice = makeAddr("claimerEOA");
     address internal bob = makeAddr("recipientEOA");
+
+    receive() external payable {}
 
     function setUp() public {
         vm.createSelectFork("https://mainnet.gateway.tenderly.co", 26_127_182);
@@ -111,7 +119,7 @@ contract IMDSTRForkTest is Test {
     }
 
     function testExtensionScriptRealNFTSnapshotAndOneEthFloor() public {
-        DeployAdamExtension script = new DeployAdamExtension();
+        DeployAdamExtension script = DeployAdamExtension(deployCode("DeployAdamExtension.s.sol:DeployAdamExtension"));
         DeployAdamExtension.Config memory c = script.mainnetConfig(
             address(adam), address(script), bob, block.timestamp + 1 days, keccak256("fork policy fixture")
         );
@@ -128,6 +136,7 @@ contract IMDSTRForkTest is Test {
         vm.prank(nftOwner);
         d.nftClaim.claimAndStake(0, ids);
         assertEq(d.distributor.stakedBalance(nftOwner), 5000e18);
+        assertEq(d.distributor.unlockTime(nftOwner), vm.getBlockTimestamp() + 24 hours);
         vm.prank(IStrategyAdmin(IMDSTR).owner());
         IStrategyAdmin(IMDSTR).setDistributor(address(d.distributor), true);
         d.distributor.enableDirectDistribution();
@@ -150,23 +159,27 @@ contract IMDSTRForkTest is Test {
 
     function testAuditFreshTokenExtensionThenHookOnlySingleSidedLaunch() public {
         LaunchToken fresh = new LaunchToken();
-        DeployAdamExtension extension = new DeployAdamExtension();
+        DeployAdamExtension extension = DeployAdamExtension(deployCode("DeployAdamExtension.s.sol:DeployAdamExtension"));
         DeployAdamExtension.Config memory c = extension.mainnetConfig(
             address(fresh), address(extension), bob, block.timestamp + 1 days, keccak256("audit fork policy")
         );
         c.funder = address(this);
         fresh.approve(address(extension), 110_000_000e18);
         DeployAdamExtension.Deployment memory e = extension.deploy(c);
-        DeployAdam hookScript = new DeployAdam();
+        DeployAdam hookScript = DeployAdam(deployCode("DeployAdam.s.sol:DeployAdam"));
         fresh.transfer(address(hookScript), 890_000_000e18);
         DeployAdam.Config memory h =
             hookScript.mainnetConfig(address(hookScript), bob, address(hookScript), address(fresh));
         h.treasury = address(e.treasury);
         h.create2Deployer = address(hookScript);
-        h.liquidityAdam = 890_000_000e18;
+        assertEq(h.liquidityAdam, 890_000_000e18, "extension remainder is the default");
         DeployAdam.Deployment memory d = hookScript.deployContracts(h);
         uint256 ethBefore = MANAGER.balance;
-        hookScript.launchPool(h, d);
+        IPositionManager positions = IPositionManager(h.positionManager);
+        uint256 lpId = positions.nextTokenId();
+        vm.recordLogs();
+        (, uint128 liquidity) = hookScript.launchPool(h, d);
+        this.assertBurnedLP(h.positionManager, h.deployer, lpId, vm.getRecordedLogs());
         assertEq(address(d.distributor), address(e.distributor));
         assertEq(d.hook.treasury(), address(e.treasury));
         assertEq(uint160(address(d.hook)) & 0x3fff, 0x20cc);
@@ -179,5 +192,72 @@ contract IMDSTRForkTest is Test {
         assertGt(price, 0);
         assertEq(tick, h.initialTick);
         assertEq(pm.getLiquidity(d.key.toId()), 0, "range below current token1/token0 tick");
+        this.assertSwapsAndLockedLiquidity(h, d, lpId, liquidity);
+    }
+
+    function assertBurnedLP(address positionManager, address deployer, uint256 lpId, Vm.Log[] memory mintLogs)
+        external
+        view
+    {
+        IPositionManager positions = IPositionManager(positionManager);
+        assertEq(positions.nextTokenId(), lpId + 1, "exactly one LP minted");
+        assertEq(IERC721(positionManager).ownerOf(lpId), address(0xdead));
+        assertEq(IERC721(positionManager).balanceOf(deployer), 0, "deployer never holds the LP NFT");
+        assertEq(IERC721(positionManager).getApproved(lpId), address(0));
+        assertFalse(IERC721(positionManager).isApprovedForAll(address(0xdead), deployer));
+        uint256 transfers;
+        for (uint256 i; i < mintLogs.length; ++i) {
+            if (
+                mintLogs[i].emitter == positionManager
+                    && mintLogs[i].topics[0] == keccak256("Transfer(address,address,uint256)")
+                    && uint256(mintLogs[i].topics[3]) == lpId
+            ) {
+                assertEq(mintLogs[i].topics[1], bytes32(0));
+                assertEq(mintLogs[i].topics[2], bytes32(uint256(uint160(address(0xdead)))));
+                ++transfers;
+            }
+        }
+        assertEq(transfers, 1, "mint directly to dead, without a deployer transfer");
+    }
+
+    function assertSwapsAndLockedLiquidity(
+        DeployAdam.Config memory h,
+        DeployAdam.Deployment memory d,
+        uint256 lpId,
+        uint128 liquidity
+    ) external {
+        IPositionManager positions = IPositionManager(h.positionManager);
+        LaunchToken fresh = d.token;
+        PoolSwapTest router = new PoolSwapTest(pm);
+        BalanceDelta bought = router.swap{value: 1 ether}(
+            d.key,
+            SwapParams(true, -int256(1 ether), TickMath.MIN_SQRT_PRICE + 1),
+            PoolSwapTest.TestSettings(false, false),
+            ""
+        );
+        assertLt(bought.amount0(), 0);
+        assertGt(bought.amount1(), 0);
+        uint256 tokens = fresh.balanceOf(address(this));
+        assertEq(tokens, uint256(uint128(bought.amount1())));
+        fresh.approve(address(router), tokens);
+        BalanceDelta sold = router.swap(
+            d.key,
+            SwapParams(false, -int256(tokens / 2), TickMath.MAX_SQRT_PRICE - 1),
+            PoolSwapTest.TestSettings(false, false),
+            ""
+        );
+        assertGt(sold.amount0(), 0);
+        assertLt(sold.amount1(), 0);
+        assertGt(address(d.treasury).balance, 0, "swaps still pay the existing hook fees");
+
+        bytes memory actions = abi.encodePacked(uint8(Actions.DECREASE_LIQUIDITY), uint8(Actions.TAKE_PAIR));
+        bytes[] memory params = new bytes[](2);
+        params[0] = abi.encode(lpId, uint256(liquidity), uint128(0), uint128(0), "");
+        params[1] = abi.encode(d.key.currency0, d.key.currency1, h.deployer);
+        vm.expectRevert(abi.encodeWithSelector(IPositionManager.NotApproved.selector, h.deployer));
+        vm.prank(h.deployer);
+        positions.modifyLiquidities(abi.encode(actions, params), block.timestamp);
+        assertEq(positions.getPositionLiquidity(lpId), liquidity);
+        assertEq(IERC721(h.positionManager).ownerOf(lpId), address(0xdead));
     }
 }

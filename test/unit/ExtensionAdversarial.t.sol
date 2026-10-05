@@ -84,6 +84,7 @@ contract ExtensionAdversarialTest is ExtensionFixture {
         d2.claimReward(address(imd));
         vm.prank(alice);
         d2.claimReward(address(pnkstr));
+        vm.warp(d2.unlockTime(alice));
         vm.prank(alice);
         d2.unstake(100_000_000e18);
         assertEq(d2.stakedBalance(alice), 0);
@@ -107,6 +108,7 @@ contract ExtensionAdversarialTest is ExtensionFixture {
         uint256 bDue = d2.earned(bob, address(0));
         assertLe(aDue + bDue, value);
         assertApproxEqAbs(aDue, value * aStake / (aStake + bStake), 1);
+        vm.warp(d2.unlockTime(alice));
         vm.prank(alice);
         d2.unstake(aStake);
         vm.prank(bob);

@@ -21,6 +21,9 @@ interface IStrategyToken {
 /// @custom:x https://x.com/IaMaDamIMD
 contract AdamDistributorV2 is AdamDistributor, IUnlockCallback {
     using SafeERC20 for IERC20;
+    uint256 public constant UNSTAKE_DELAY = 24 hours;
+    /// @notice Principal unlock timestamp, reset by every successful stake or stakeFor.
+    mapping(address wallet => uint256) public unlockTime;
     IPoolManager public immutable poolManager;
     address public immutable imdstr;
     uint256 public immutable maxEthPerClaim;
@@ -33,6 +36,8 @@ contract AdamDistributorV2 is AdamDistributor, IUnlockCallback {
     error InvalidSwap();
     error Slippage();
     error NotWhitelisted();
+    error StakeLocked(address wallet, uint256 unlockAt);
+    event StakeLockUpdated(address indexed wallet, uint256 unlockAt);
 
     constructor(
         address adam_,
@@ -66,9 +71,28 @@ contract AdamDistributorV2 is AdamDistributor, IUnlockCallback {
         _settle(beneficiary);
         stakedBalance[beneficiary] += amount;
         totalStaked += amount;
+        _lockStake(beneficiary);
         _syncBacklogStreams();
         adam.safeTransferFrom(msg.sender, address(this), amount);
         emit Staked(beneficiary, amount);
+    }
+
+    function _stake(uint256 amount) internal override {
+        super._stake(amount);
+        _lockStake(msg.sender);
+    }
+
+    /// @dev Both unstake() and exit() use this path. Reward-only claims never call it.
+    function _unstake(uint256 amount) internal override {
+        uint256 unlockAt = unlockTime[msg.sender];
+        if (block.timestamp < unlockAt) revert StakeLocked(msg.sender, unlockAt);
+        super._unstake(amount);
+    }
+
+    function _lockStake(address wallet) private {
+        uint256 unlockAt = block.timestamp + UNSTAKE_DELAY;
+        unlockTime[wallet] = unlockAt;
+        emit StakeLockUpdated(wallet, unlockAt);
     }
 
     /// @notice Claim one transferable reward independently if another asset is temporarily locked.

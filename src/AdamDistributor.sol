@@ -108,6 +108,10 @@ contract AdamDistributor is IAdamDistributor, ReentrancyGuard {
 
     /// @notice Stake ADAM to start earning. Requires prior approval.
     function stake(uint256 amount) external nonReentrant {
+        _stake(amount);
+    }
+
+    function _stake(uint256 amount) internal virtual {
         if (amount == 0) revert ZeroAmount();
         if (isExcluded[msg.sender]) revert Excluded(msg.sender);
         _settle(msg.sender);
@@ -186,7 +190,7 @@ contract AdamDistributor is IAdamDistributor, ReentrancyGuard {
         totalDistributed[token] += distributed;
     }
 
-    function _unstake(uint256 amount) private {
+    function _unstake(uint256 amount) internal virtual {
         if (amount == 0) revert ZeroAmount();
         uint256 staked = stakedBalance[msg.sender];
         if (amount > staked) revert InsufficientStake();

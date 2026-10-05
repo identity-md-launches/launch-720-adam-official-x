@@ -25,7 +25,7 @@ New coverage:
 
 All original token/hook/distributor/treasury, adversarial, fuzz and invariant suites remain. The parent mainnet suite retains block 26,126,549 and now uses an explicit RPC instead of reading the environment. It covers IMD/PNKSTR tax/floors, original hooked single-sided launch and fee/staking integration.
 
-Final results:
+Parent extension results (historical; the audit-remediation rerun is recorded in REVIEW.md):
 
 - `forge build`: passed with Solidity 0.8.26.
 - `forge test`: **151 passed, 0 failed, 0 skipped**, across 20 suites. New fuzz tests each use 256 runs; the original suites retain their fuzz/invariant settings.
@@ -34,3 +34,16 @@ Final results:
 - All four new production contracts fit EIP-170's 24,576-byte deployed-code limit; largest is TreasuryV2 at 12,192 bytes.
 
 Fork endpoints: the new suite uses `https://eth-pokt.nodies.app`; the original suite uses `https://mainnet.gateway.tenderly.co`. Earlier providers lacked historical state or rate-limited requests. These are external RPC failures, not skipped tests; the final suites passed against public archive providers. Use the documented single-thread/request-rate options. Public RPC availability is not guaranteed; substituting another archive endpoint leaves the pinned blocks and assertions intact.
+
+## Audit remediation regression coverage
+
+- `StakingLock`: exact 24-hour boundary for partial unstake and exit, zero/failed stakes do not reset the deadline, reward-only claims remain live, restaking after exit, and fuzzed direct/delegated top-ups before/after the previous deadline.
+- `StakingLockInvariant`: random direct/delegated stakes, partial withdrawals/exits, claims, funding and time advances; expected lock reverts are checked explicitly. Independent last-stake/principal counters verify timing and fund conservation; all principal is recovered after a final wait. 256 runs at depth 64, fail-on-revert enabled.
+- `AdamExtension.testJITProcessCannotExitButCanClaimAllRewardForms`: stake immediately before the real local TreasuryV2 process, reject same-block exit/unstake, exercise per-asset and buy-on-claim rewards while locked, and recover principal at expiry.
+- `NFTClaim.testClaimAndStakeSetsAndResetsClaimantsLock`: first claim and a second NFT claim reset the beneficiary's whole stake, without locking NFTClaim itself.
+- `LiquidityLock`: exact offline mint-action encoding to the fixed dead address, default NFT reserve, fuzzed downward allocations, rejection of upward/zero allocations and insufficient balance. This mocks external periphery calls; actual ownership and settlement are covered on the fork.
+- `IMDSTRFork.testAuditFreshTokenExtensionThenHookOnlySingleSidedLaunch`: block 26,127,182, complete extension + hook-only deployment; exactly one mint from zero directly to dead, owner/approval/deployer balance checks, no ETH deposited at launch, both swap directions, and real PositionManager rejection of deployer liquidity decrease. NFT claimAndStake also verifies unlockTime on the fork.
+
+The original V1 fixtures explicitly keep their prior full-supply allocation; production hook-only defaults are 890 million. Existing V2 withdrawal-success tests now wait for their wallet's unlockTime while preserving their original reward/conservation assertions. Shared fixtures load the compiled PoolManager and deployment scripts with Foundry's deployCode helper so the IR optimizer does not embed their large constructor bytecode in every inheriting test. All artifacts are built locally from the unchanged vendored dependencies; no FFI, network dependency, or build-setting override is introduced into default tests.
+
+Final remediation results: **179 offline tests passed** on both the normal run and a second seed (`0x20261005`, 1,024 fuzz cases); **11 fork tests passed** against the public Tenderly archive endpoint. All three invariant suites passed 256 runs at depth 64. Build and formatting passed with the original compiler settings. See [REVIEW.md](../REVIEW.md) for exact commands, sizes, limitations and results.

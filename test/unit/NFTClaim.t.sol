@@ -2,6 +2,7 @@
 pragma solidity 0.8.26;
 import {ExtensionFixture} from "../utils/ExtensionFixture.sol";
 import {NFTClaim} from "../../src/NFTClaim.sol";
+import {AdamDistributorV2} from "../../src/AdamDistributorV2.sol";
 import {AdamDistributor} from "../../src/AdamDistributor.sol";
 
 /// @custom:x https://x.com/IaMaDamIMD
@@ -52,6 +53,29 @@ contract NFTClaimTest is ExtensionFixture {
         vm.prank(alice);
         nftClaim.claim(1, ids(1));
         assertEq(nftClaim.claimed(1, 1), 500_000e18);
+    }
+
+    function testClaimAndStakeSetsAndResetsClaimantsLock() public {
+        vm.warp(nftClaim.launch());
+        vm.prank(alice);
+        nftClaim.claimAndStake(0, ids(0));
+        uint256 firstUnlock = vm.getBlockTimestamp() + 24 hours;
+        assertEq(d2.unlockTime(alice), firstUnlock);
+        assertEq(d2.unlockTime(address(nftClaim)), 0);
+        vm.warp(firstUnlock - 1);
+        vm.prank(alice);
+        nftClaim.claimAndStake(0, ids(1));
+        uint256 resetUnlock = vm.getBlockTimestamp() + 24 hours;
+        assertEq(d2.unlockTime(alice), resetUnlock);
+        vm.warp(firstUnlock);
+        vm.expectRevert(abi.encodeWithSelector(AdamDistributorV2.StakeLocked.selector, alice, resetUnlock));
+        vm.prank(alice);
+        d2.exit();
+        vm.warp(resetUnlock);
+        uint256 beforeBalance = adam.balanceOf(alice);
+        vm.prank(alice);
+        d2.unstake(5_000_000e18);
+        assertEq(adam.balanceOf(alice) - beforeBalance, 5_000_000e18);
     }
 
     function testInvalidIdsUnauthorizedAndBatchAtomicity() public {

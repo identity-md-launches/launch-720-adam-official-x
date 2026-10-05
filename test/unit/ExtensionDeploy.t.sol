@@ -9,7 +9,7 @@ contract ExtensionDeployTest is ExtensionFixture {
     DeployAdamExtension internal extension;
 
     function config() internal returns (DeployAdamExtension.Config memory c) {
-        extension = new DeployAdamExtension();
+        extension = DeployAdamExtension(deployCode("DeployAdamExtension.s.sol:DeployAdamExtension"));
         c.chainId = block.chainid;
         c.adam = address(adam);
         c.creator = address(extension);

@@ -57,6 +57,43 @@ contract AdamExtensionTest is ExtensionFixture {
         assertEq(t2.unsplitEth(), 0);
     }
 
+    function testJITProcessCannotExitButCanClaimAllRewardForms() public {
+        // Same-block stake -> process -> exit was A-01's immediate principal round trip.
+        stakeAlice(100_000_000e18);
+        uint256 unlockAt = d2.unlockTime(alice);
+        fundTreasury(1 ether);
+        t2.process();
+        uint256 principal = d2.stakedBalance(alice);
+        vm.expectRevert(abi.encodeWithSelector(AdamDistributorV2.StakeLocked.selector, alice, unlockAt));
+        vm.prank(alice);
+        d2.exit();
+        vm.expectRevert(abi.encodeWithSelector(AdamDistributorV2.StakeLocked.selector, alice, unlockAt));
+        vm.prank(alice);
+        d2.unstake(principal);
+        vm.prank(alice);
+        d2.claimReward(address(imd));
+        vm.prank(alice);
+        d2.claimReward(address(pnkstr));
+        uint256 ethDue = d2.earned(alice, address(0));
+        vm.prank(alice);
+        d2.claimIMDSTR(ethDue, 1, block.timestamp);
+        assertGt(imd.balanceOf(alice), 0);
+        assertGt(pnkstr.balanceOf(alice), 0);
+        assertGt(imdstr.balanceOf(alice), 0);
+        imdstr.setDistributor(address(d2), true);
+        d2.enableDirectDistribution();
+        d2.notifyIMDSTR{value: 0.01 ether}(1);
+        vm.prank(alice);
+        d2.claimReward(address(imdstr));
+        assertEq(d2.stakedBalance(alice), principal);
+        assertEq(d2.unlockTime(alice), unlockAt);
+        vm.warp(unlockAt);
+        vm.prank(alice);
+        d2.exit();
+        assertEq(d2.stakedBalance(alice), 0);
+        assertEq(adam.balanceOf(alice), principal);
+    }
+
     function testReportWeightsAndStaleFallback() public {
         stakeAlice(100_000_000e18);
         submit(6500, 2000, 1500);
@@ -91,6 +128,7 @@ contract AdamExtensionTest is ExtensionFixture {
         vm.prank(alice);
         vm.expectRevert(AdamDistributorV2.InvalidSwap.selector);
         d2.claimIMDSTR(1, 0, block.timestamp);
+        vm.warp(d2.unlockTime(alice));
         vm.prank(alice);
         d2.unstake(100_000_000e18);
         vm.prank(alice);

@@ -127,7 +127,7 @@ contract DeployWiringTest is LocalV4 {
         assertEq(c.initialTick % c.tickSpacing, 0);
         assertEq(c.lowerTick % c.tickSpacing, 0);
         assertLt(c.lowerTick, c.initialTick);
-        assertEq(c.liquidityAdam, 1_000_000_000e18);
+        assertEq(c.liquidityAdam, 890_000_000e18);
     }
 
     function test_launchPoolRejectsMisconfiguration() public {

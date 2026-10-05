@@ -46,7 +46,7 @@ contract PostFactoryHookTest is LocalV4 {
         vm.stopPrank();
 
         // The owner's hook-only run: TREASURY set, LIQUIDITY_ADAM equal to what they actually hold.
-        deployScript = new DeployAdam();
+        deployScript = DeployAdam(deployCode("DeployAdam.s.sol:DeployAdam"));
         cfg = deployScript.mainnetConfig(address(this), teamWallet, hookOwner, address(0));
         cfg.treasury = address(treasury);
         cfg.poolManager = address(poolManager);

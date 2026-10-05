@@ -44,12 +44,13 @@ contract MainnetForkTest is Test {
 
     function setUp() public {
         vm.createSelectFork("https://mainnet.gateway.tenderly.co", 26_126_549);
-        script = new DeployAdam();
+        script = DeployAdam(deployCode("DeployAdam.s.sol:DeployAdam"));
         pm = IPoolManager(script.POOL_MANAGER());
         swapRouter = new PoolSwapTest(pm);
         // The script contract plays the deployer: it holds the supply, owns the hook and signs nothing.
         cfg = script.mainnetConfig(address(script), teamWallet, address(script), address(0));
         cfg.create2Deployer = address(script);
+        cfg.liquidityAdam = 1_000_000_000e18; // Legacy V1 fixture, without NFTClaim.
         d = script.deployContracts(cfg);
         managerEthBeforeLaunch = address(pm).balance;
         (d.sqrtPriceX96, d.liquidity) = script.launchPool(cfg, d);

@@ -59,7 +59,8 @@ contract DeployAdam is Script {
     // 1.0001^108180 = 50k ADAM per ETH (1000x). Both ticks are multiples of 60.
     int24 public constant INITIAL_TICK = 177_240;
     int24 public constant LOWER_TICK = 108_180;
-    uint256 public constant LIQUIDITY_ADAM = 1_000_000_000e18;
+    uint256 public constant LIQUIDITY_ADAM = 890_000_000e18;
+    address public constant LP_RECIPIENT = 0x000000000000000000000000000000000000dEaD;
 
     struct Config {
         address deployer;
@@ -108,6 +109,7 @@ contract DeployAdam is Script {
     error PipelineTokenMismatch(address configured, address pipeline);
     error PipelineRewardMismatch(uint8 leg, address configured, address pipeline);
     error InsufficientAdamForLiquidity(uint256 held, uint256 required);
+    error InvalidLiquidityAmount(uint256 amount);
 
     function mainnetConfig(address deployer, address teamWallet, address hookOwner, address adamToken)
         public
@@ -144,7 +146,7 @@ contract DeployAdam is Script {
     }
 
     /// @notice Manual hook-only entry point. Required: DEPLOYER, TEAM_WALLET, ADAM_TOKEN, TREASURY.
-    /// @dev LIQUIDITY_ADAM is the owner's available allocation after funding NFTClaim; choose explicitly.
+    /// @dev Defaults to the 89% remaining after NFTClaim funding; explicit env may only reduce it.
     function run() external {
         address deployer = vm.envAddress("DEPLOYER");
         address teamWallet = vm.envAddress("TEAM_WALLET");
@@ -174,6 +176,7 @@ contract DeployAdam is Script {
     /// (CREATE2 from this contract) as long as `cfg.create2Deployer` matches.
     function deployContracts(Config memory cfg) public returns (Deployment memory d) {
         if (cfg.treasury != address(0)) {
+            _validateLiquidity(cfg.liquidityAdam);
             (d.token, d.distributor, d.treasury) = resolvePipeline(cfg);
         } else {
             if (cfg.adamToken == address(0)) {
@@ -249,6 +252,9 @@ contract DeployAdam is Script {
         public
         returns (uint160 sqrtPriceX96, uint128 liquidity)
     {
+        if (cfg.treasury != address(0)) {
+            _validateLiquidity(cfg.liquidityAdam);
+        }
         if (cfg.hookOwner != cfg.deployer) {
             revert DeployerMustOwnHookAtLaunch();
         }
@@ -279,11 +285,15 @@ contract DeployAdam is Script {
             uint256(liquidity),
             uint128(0),
             uint128(cfg.liquidityAdam),
-            cfg.deployer,
+            cfg.treasury != address(0) ? LP_RECIPIENT : cfg.deployer,
             ""
         );
         params[1] = abi.encode(d.key.currency0, d.key.currency1);
         IPositionManager(cfg.positionManager).modifyLiquidities(abi.encode(actions, params), block.timestamp + 1 hours);
+    }
+
+    function _validateLiquidity(uint256 amount) private pure {
+        if (amount == 0 || amount > LIQUIDITY_ADAM) revert InvalidLiquidityAmount(amount);
     }
 
     function hookFlags() public pure returns (uint160) {

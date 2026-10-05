@@ -64,7 +64,7 @@ abstract contract LocalV4 is Test {
 
     function setUp() public virtual {
         vm.warp(1_800_000_000);
-        poolManager = new PoolManager(address(this));
+        poolManager = PoolManager(deployCode("PoolManager.sol:PoolManager", abi.encode(address(this))));
         swapRouter = new PoolSwapTest(poolManager);
         lpRouter = new PoolModifyLiquidityTest(poolManager);
 
@@ -132,8 +132,9 @@ abstract contract LocalV4 is Test {
     }
 
     function _deployAdamSystem() internal virtual {
-        deployScript = new DeployAdam();
+        deployScript = DeployAdam(deployCode("DeployAdam.s.sol:DeployAdam"));
         cfg = deployScript.mainnetConfig(address(this), teamWallet, hookOwner, address(0));
+        cfg.liquidityAdam = 1_000_000_000e18; // Preserve the legacy full-supply fixture.
         cfg.poolManager = address(poolManager);
         cfg.positionManager = address(0);
         cfg.permit2 = address(0);
