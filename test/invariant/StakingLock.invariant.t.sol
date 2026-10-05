@@ -23,23 +23,31 @@ contract StakingLockHandler is Test {
         actor = who;
         vm.prank(who);
         a.approve(address(d), type(uint256).max);
+        vm.prank(d.nftClaim());
+        a.approve(address(d), type(uint256).max);
         a.approve(address(d), type(uint256).max);
         r.approve(address(d), type(uint256).max);
     }
 
-    function stake(uint96 value, bool gift) public {
-        address funder = gift ? address(this) : actor;
+    function stake(uint96 value, bool delegated) public {
+        address funder = delegated ? dist.nftClaim() : actor;
         uint256 balance = adam.balanceOf(funder);
         if (balance == 0) return;
         uint256 amount = bound(value, 1, balance);
-        if (gift) {
+        vm.prank(funder);
+        if (delegated) {
             dist.stakeFor(actor, amount);
         } else {
-            vm.prank(actor);
             dist.stake(amount);
         }
         principal += amount;
         lastStake = vm.getBlockTimestamp();
+    }
+
+    function grief(uint96 value) public {
+        uint256 amount = bound(value, 1, adam.balanceOf(address(this)));
+        vm.expectRevert(AdamDistributorV2.OnlyNFTClaim.selector);
+        dist.stakeFor(actor, amount);
     }
 
     function withdraw(uint96 value, bool exitAll) public {
@@ -84,11 +92,12 @@ contract StakingLockInvariantTest is StakingLockFixture {
         super.setUp();
         handler = new StakingLockHandler(dist, adam, reward, alice);
         adam.transfer(address(handler), 100e18);
-        bytes4[] memory selectors = new bytes4[](4);
+        bytes4[] memory selectors = new bytes4[](5);
         selectors[0] = handler.stake.selector;
         selectors[1] = handler.withdraw.selector;
         selectors[2] = handler.claimAndFund.selector;
         selectors[3] = handler.elapse.selector;
+        selectors[4] = handler.grief.selector;
         targetContract(address(handler));
         targetSelector(FuzzSelector(address(handler), selectors));
     }
@@ -97,7 +106,11 @@ contract StakingLockInvariantTest is StakingLockFixture {
         assertEq(dist.stakedBalance(alice), handler.principal());
         assertEq(dist.totalStaked(), handler.principal());
         assertEq(adam.balanceOf(address(dist)), handler.principal());
-        assertEq(adam.balanceOf(alice) + adam.balanceOf(address(handler)) + handler.principal(), 200e18);
+        assertEq(
+            adam.balanceOf(alice) + adam.balanceOf(claimContract) + adam.balanceOf(address(handler))
+                + handler.principal(),
+            300e18
+        );
         assertEq(dist.unlockTime(alice), handler.lastStake() == 0 ? 0 : handler.lastStake() + 24 hours);
         assertEq(reward.balanceOf(address(dist)) + reward.balanceOf(alice), handler.notified());
         assertLe(dist.earned(alice, address(reward)), reward.balanceOf(address(dist)));

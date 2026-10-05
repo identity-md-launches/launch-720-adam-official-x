@@ -129,6 +129,7 @@ contract IMDSTRForkTest is Test {
         assertEq(d.nftClaim.imdSize(), 2000);
         assertEq(d.nftClaim.pepeSize(), 1178);
         assertEq(adam.balanceOf(address(d.nftClaim)), 110_000_000e18);
+        assertEq(d.distributor.nftClaim(), address(d.nftClaim));
         address nftOwner = IERC721(c.imdNFT).ownerOf(0);
         uint256[] memory ids = new uint256[](1);
         ids[0] = 0;
@@ -137,6 +138,14 @@ contract IMDSTRForkTest is Test {
         d.nftClaim.claimAndStake(0, ids);
         assertEq(d.distributor.stakedBalance(nftOwner), 5000e18);
         assertEq(d.distributor.unlockTime(nftOwner), vm.getBlockTimestamp() + 24 hours);
+        uint256 unlockAt = d.distributor.unlockTime(nftOwner);
+        adam.approve(address(d.distributor), 1);
+        vm.expectRevert(AdamDistributorV2.OnlyNFTClaim.selector);
+        d.distributor.stakeFor(nftOwner, 1);
+        assertEq(d.distributor.unlockTime(nftOwner), unlockAt);
+        vm.expectRevert(abi.encodeWithSelector(AdamDistributorV2.StakeLocked.selector, nftOwner, unlockAt));
+        vm.prank(nftOwner);
+        d.distributor.unstake(1);
         vm.prank(IStrategyAdmin(IMDSTR).owner());
         IStrategyAdmin(IMDSTR).setDistributor(address(d.distributor), true);
         d.distributor.enableDirectDistribution();
@@ -145,6 +154,10 @@ contract IMDSTRForkTest is Test {
         assertGe(got, floor);
         console2.log("IMDSTR one ETH output", got);
         console2.log("IMDSTR one ETH floor", floor);
+        vm.warp(unlockAt);
+        vm.prank(nftOwner);
+        d.distributor.unstake(5000e18);
+        assertEq(d.distributor.stakedBalance(nftOwner), 0);
     }
 
     function testDirectModeAfterOwnerWhitelist() public {
@@ -193,6 +206,7 @@ contract IMDSTRForkTest is Test {
         assertEq(tick, h.initialTick);
         assertEq(pm.getLiquidity(d.key.toId()), 0, "range below current token1/token0 tick");
         this.assertSwapsAndLockedLiquidity(h, d, lpId, liquidity);
+        this.assertNoAlternateLPWithdrawal(h.positionManager, h.deployer, lpId, liquidity);
     }
 
     function assertBurnedLP(address positionManager, address deployer, uint256 lpId, Vm.Log[] memory mintLogs)
@@ -259,5 +273,35 @@ contract IMDSTRForkTest is Test {
         positions.modifyLiquidities(abi.encode(actions, params), block.timestamp);
         assertEq(positions.getPositionLiquidity(lpId), liquidity);
         assertEq(IERC721(h.positionManager).ownerOf(lpId), address(0xdead));
+    }
+
+    function assertNoAlternateLPWithdrawal(address positionManager, address deployer, uint256 lpId, uint128 liquidity)
+        external
+    {
+        IPositionManager positions = IPositionManager(positionManager);
+        bytes[] memory params = new bytes[](1);
+        // A zero decrease collects fees, and burning a live position also decreases its liquidity.
+        params[0] = abi.encode(lpId, uint256(0), uint128(0), uint128(0), "");
+        bytes memory actions = abi.encodePacked(uint8(Actions.DECREASE_LIQUIDITY));
+        vm.expectRevert(abi.encodeWithSelector(IPositionManager.NotApproved.selector, deployer));
+        vm.prank(deployer);
+        positions.modifyLiquidities(abi.encode(actions, params), block.timestamp);
+        vm.expectRevert(abi.encodeWithSelector(IPositionManager.NotApproved.selector, deployer));
+        vm.prank(deployer);
+        positions.modifyLiquiditiesWithoutUnlock(actions, params);
+        params[0] = abi.encode(lpId, uint128(0), uint128(0), "");
+        actions = abi.encodePacked(uint8(Actions.BURN_POSITION));
+        vm.expectRevert(abi.encodeWithSelector(IPositionManager.NotApproved.selector, deployer));
+        vm.prank(deployer);
+        positions.modifyLiquidities(abi.encode(actions, params), block.timestamp);
+        vm.expectRevert();
+        vm.prank(deployer);
+        IERC721(positionManager).transferFrom(address(0xdead), deployer, lpId);
+        vm.expectRevert();
+        vm.prank(deployer);
+        IERC721(positionManager).approve(deployer, lpId);
+        assertEq(IERC721(positionManager).ownerOf(lpId), address(0xdead));
+        assertEq(IERC721(positionManager).getApproved(lpId), address(0));
+        assertEq(positions.getPositionLiquidity(lpId), liquidity);
     }
 }

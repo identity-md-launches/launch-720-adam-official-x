@@ -24,6 +24,8 @@ contract AdamDistributorV2 is AdamDistributor, IUnlockCallback {
     uint256 public constant UNSTAKE_DELAY = 24 hours;
     /// @notice Principal unlock timestamp, reset by every successful stake or stakeFor.
     mapping(address wallet => uint256) public unlockTime;
+    /// @notice Only this immutable NFTClaim may stake on behalf of its claimant.
+    address public immutable nftClaim;
     IPoolManager public immutable poolManager;
     address public immutable imdstr;
     uint256 public immutable maxEthPerClaim;
@@ -36,6 +38,7 @@ contract AdamDistributorV2 is AdamDistributor, IUnlockCallback {
     error InvalidSwap();
     error Slippage();
     error NotWhitelisted();
+    error OnlyNFTClaim();
     error StakeLocked(address wallet, uint256 unlockAt);
     event StakeLockUpdated(address indexed wallet, uint256 unlockAt);
 
@@ -55,6 +58,7 @@ contract AdamDistributorV2 is AdamDistributor, IUnlockCallback {
                 || maxEth_ > uint256(uint128(type(int128).max))
         ) revert InvalidConfiguration();
         poolManager = IPoolManager(manager_);
+        nftClaim = nftClaim_;
         imdstr = token;
         imdstrKey = key_;
         maxEthPerClaim = maxEth_;
@@ -64,8 +68,9 @@ contract AdamDistributorV2 is AdamDistributor, IUnlockCallback {
         isExcluded[token] = true;
     }
 
-    /// @notice Pull ADAM from the caller, credit only beneficiary. NFTClaim itself is excluded.
+    /// @notice Only NFTClaim may pull its ADAM into the claimant's stake. Other users call stake().
     function stakeFor(address beneficiary, uint256 amount) external nonReentrant {
+        if (msg.sender != nftClaim) revert OnlyNFTClaim();
         if (amount == 0) revert ZeroAmount();
         if (isExcluded[beneficiary]) revert Excluded(beneficiary);
         _settle(beneficiary);

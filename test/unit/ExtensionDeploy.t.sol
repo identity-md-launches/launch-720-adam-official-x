@@ -35,6 +35,7 @@ contract ExtensionDeployTest is ExtensionFixture {
         assertEq(adam.balanceOf(address(d.nftClaim)), 110_000_000e18);
         assertEq(balanceBefore - adam.balanceOf(address(this)), 110_000_000e18);
         assertTrue(d.distributor.isExcluded(address(d.nftClaim)));
+        assertEq(d.distributor.nftClaim(), address(d.nftClaim));
         assertEq(address(d.nftClaim.distributor()), address(d.distributor));
         assertEq(address(d.treasury.distributor()), address(d.distributor));
         assertEq(address(d.treasury.splitOracle()), address(d.oracle));

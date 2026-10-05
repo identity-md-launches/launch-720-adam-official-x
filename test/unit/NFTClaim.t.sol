@@ -46,6 +46,7 @@ contract NFTClaimTest is ExtensionFixture {
         assertTrue(d2.isExcluded(address(nftClaim)));
         assertEq(adam.allowance(address(nftClaim), address(d2)), 0);
         vm.expectRevert(abi.encodeWithSelector(AdamDistributor.Excluded.selector, address(nftClaim)));
+        vm.prank(address(nftClaim));
         d2.stakeFor(address(nftClaim), 1);
         vm.prank(alice);
         vm.expectRevert(NFTClaim.NothingUnlocked.selector);
@@ -76,6 +77,79 @@ contract NFTClaimTest is ExtensionFixture {
         vm.prank(alice);
         d2.unstake(5_000_000e18);
         assertEq(adam.balanceOf(alice) - beforeBalance, 5_000_000e18);
+    }
+
+    function testApprovedOperatorCannotResetOwnersLockThroughNFTClaim() public {
+        stakeAlice(10e18);
+        uint256 until = d2.unlockTime(alice);
+        vm.warp(nftClaim.launch());
+        vm.prank(alice);
+        nft.setApprovalForAll(bob, true);
+        vm.expectRevert(NFTClaim.NotOwner.selector);
+        vm.prank(bob);
+        nftClaim.claimAndStake(0, ids(0));
+        assertEq(nftClaim.claimed(0, 0), 0);
+        assertEq(d2.unlockTime(alice), until);
+        assertEq(d2.unlockTime(bob), 0);
+        assertEq(adam.allowance(address(nftClaim), address(d2)), 0);
+        vm.prank(alice);
+        d2.unstake(10e18);
+        assertEq(d2.stakedBalance(alice), 0);
+    }
+
+    function testTransferredNFTCannotMoveStakeOrInheritMatureLock() public {
+        stakeAlice(10e18);
+        vm.warp(nftClaim.launch());
+        vm.prank(alice);
+        nftClaim.claimAndStake(0, ids(0));
+        uint256 aliceUnlock = d2.unlockTime(alice);
+        uint256 aliceStake = d2.stakedBalance(alice);
+        vm.warp(aliceUnlock);
+        vm.prank(alice);
+        nft.transferFrom(alice, bob, 0);
+        vm.prank(bob);
+        nftClaim.claimAndStake(0, ids(0));
+        uint256 bobUnlock = vm.getBlockTimestamp() + 24 hours;
+        assertEq(d2.unlockTime(alice), aliceUnlock);
+        assertEq(d2.stakedBalance(alice), aliceStake);
+        assertEq(d2.unlockTime(bob), bobUnlock);
+        assertEq(d2.stakedBalance(bob), 2_500_000e18);
+        d2.notifyIMDSTR{value: 0.1 ether}(0);
+        uint256 due = d2.earned(bob, address(0));
+        vm.prank(bob);
+        d2.claimIMDSTR(due, 1, block.timestamp);
+        vm.expectRevert(abi.encodeWithSelector(AdamDistributorV2.StakeLocked.selector, bob, bobUnlock));
+        vm.prank(bob);
+        d2.unstake(1);
+        vm.expectRevert(abi.encodeWithSelector(AdamDistributorV2.StakeLocked.selector, bob, bobUnlock));
+        vm.prank(bob);
+        d2.exit();
+        vm.prank(alice);
+        d2.unstake(aliceStake);
+        assertEq(d2.unlockTime(bob), bobUnlock);
+        vm.warp(bobUnlock);
+        vm.prank(bob);
+        d2.unstake(2_500_000e18);
+        assertEq(d2.totalStaked(), 0);
+    }
+
+    function testDuplicateAndEmptyClaimsCannotRelockAndPlainClaimDoesNotStake() public {
+        vm.warp(nftClaim.launch());
+        vm.prank(alice);
+        nftClaim.claimAndStake(0, ids(0));
+        uint256 until = d2.unlockTime(alice);
+        vm.warp(until - 1);
+        vm.expectRevert(NFTClaim.NothingUnlocked.selector);
+        vm.prank(alice);
+        nftClaim.claimAndStake(0, ids(0));
+        vm.expectRevert(NFTClaim.NothingUnlocked.selector);
+        vm.prank(alice);
+        nftClaim.claimAndStake(0, new uint256[](0));
+        vm.prank(alice);
+        nftClaim.claim(0, ids(1));
+        assertEq(d2.unlockTime(alice), until);
+        assertEq(d2.stakedBalance(alice), 2_500_000e18);
+        assertEq(adam.allowance(address(nftClaim), address(d2)), 0);
     }
 
     function testInvalidIdsUnauthorizedAndBatchAtomicity() public {

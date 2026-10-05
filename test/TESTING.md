@@ -33,7 +33,7 @@ Parent extension results (historical; the audit-remediation rerun is recorded in
 - Pinned mainnet forks: **10 passed, 0 failed** across the four new IMDSTR/NFT tests and six original integration tests. The 1 ETH IMDSTR buy delivered 3,432,834.287892671935600222 tokens against a 3,371,166.235868870877848721-token floor.
 - All four new production contracts fit EIP-170's 24,576-byte deployed-code limit; largest is TreasuryV2 at 12,192 bytes.
 
-Fork endpoints: the new suite uses `https://eth-pokt.nodies.app`; the original suite uses `https://mainnet.gateway.tenderly.co`. Earlier providers lacked historical state or rate-limited requests. These are external RPC failures, not skipped tests; the final suites passed against public archive providers. Use the documented single-thread/request-rate options. Public RPC availability is not guaranteed; substituting another archive endpoint leaves the pinned blocks and assertions intact.
+Fork endpoints: both suites now use `https://mainnet.gateway.tenderly.co`. The original extension run used `https://eth-pokt.nodies.app`. Earlier providers lacked historical state or rate-limited requests. These are external RPC failures, not skipped tests; the final suites passed against public archive providers. Use the documented single-thread/request-rate options. Public RPC availability is not guaranteed; substituting another archive endpoint leaves the pinned blocks and assertions intact.
 
 ## Audit remediation regression coverage
 
@@ -47,3 +47,13 @@ Fork endpoints: the new suite uses `https://eth-pokt.nodies.app`; the original s
 The original V1 fixtures explicitly keep their prior full-supply allocation; production hook-only defaults are 890 million. Existing V2 withdrawal-success tests now wait for their wallet's unlockTime while preserving their original reward/conservation assertions. Shared fixtures load the compiled PoolManager and deployment scripts with Foundry's deployCode helper so the IR optimizer does not embed their large constructor bytecode in every inheriting test. All artifacts are built locally from the unchanged vendored dependencies; no FFI, network dependency, or build-setting override is introduced into default tests.
 
 Final remediation results: **179 offline tests passed** on both the normal run and a second seed (`0x20261005`, 1,024 fuzz cases); **11 fork tests passed** against the public Tenderly archive endpoint. All three invariant suites passed 256 runs at depth 64. Build and formatting passed with the original compiler settings. See [REVIEW.md](../REVIEW.md) for exact commands, sizes, limitations and results.
+
+## stakeFor authorization and post-audit review
+
+- `StakingLock`: funded/approved unauthorized callers (including self-beneficiary calls) fail with `OnlyNFTClaim`; repeated 1-wei attempts cannot extend the deadline or move funds. Fuzz checks preserve principal, rewards, allowance and lock before and after expiry. A mature second wallet cannot withdraw a newly locked wallet's principal.
+- `StakingLockInvariant`: delegated stakes now impersonate only the immutable NFTClaim stand-in; a separate funded attacker attempts unauthorized gifts. Independent counters still check principal/reward conservation and each accepted stake's deadline, with complete recovery after 24 hours. Real NFTClaim calls are tested separately.
+- `NFTClaim`: approved operators cannot claim-and-stake for an owner; transferring an NFT does not transfer stake or its deadline; the buyer's new stake locks for 24 hours even when the seller is unlocked. Reward claims during that lock remain live. Duplicate, empty and plain claims cannot relock principal. Existing daily unlock and reset tests continue to use the real NFTClaim.
+- `ExtensionDeploy`: asserts the distributor's immutable NFTClaim pointer matches the predicted/deployed contract. `AuditDistributor` preserves beneficiary accounting coverage using the authorized caller.
+- `IMDSTRFork`: real NFT owner claim-and-stake succeeds, dust staking fails, early principal withdrawal fails and exact-boundary withdrawal succeeds. LP checks also reject fee collection, the no-unlock action path, burning, transfer and approval while preserving liquidity and dead ownership.
+
+Current validation results are in [REVIEW.md](../REVIEW.md); preceding counts describe earlier jobs.

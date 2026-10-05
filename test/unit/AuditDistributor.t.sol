@@ -43,8 +43,11 @@ contract AuditDistributorTest is ExtensionFixture {
         stakeAlice(10_000_000e18);
         d2.notifyIMDSTR{value: 0.1 ether}(0);
         uint256 oldDue = d2.earned(alice, address(0));
+        adam.transfer(address(nftClaim), amount);
+        vm.startPrank(address(nftClaim));
         adam.approve(address(d2), amount);
         d2.stakeFor(alice, amount);
+        vm.stopPrank();
         assertEq(d2.earned(alice, address(0)), oldDue);
         assertEq(d2.earned(address(this), address(0)), 0);
         assertEq(d2.stakedBalance(address(this)), 0);
