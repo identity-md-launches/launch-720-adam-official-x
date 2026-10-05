@@ -72,6 +72,6 @@ forge fmt --check
 FOUNDRY_PROFILE=fork forge test -vv --threads 1 --compute-units-per-second 50
 ```
 
-Default tests run offline with the existing pinned **Solidity 0.8.26**, dependencies and Foundry configuration. Fork tests are explicitly separated by the existing profile and use public RPC plus pinned blocks; no tests read/set environment variables. The fork suites use public Nodies/Tenderly archive endpoints and fail visibly on network failure. No dependencies or build configuration changed.
+Default tests run offline with the existing pinned **Solidity 0.8.26**, dependencies and Foundry configuration. Fork tests are explicitly separated by the existing profile and use public RPC plus pinned blocks; no tests read/set environment variables. The fork suites use the public Tenderly archive endpoint and fail visibly on network failure. No dependencies or build configuration changed.
 
 See [test coverage](test/TESTING.md), [self-audit](SELF_AUDIT.md), and [mainnet evidence](docs/MAINNET_SNAPSHOT.json).

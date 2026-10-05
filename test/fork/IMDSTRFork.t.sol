@@ -14,6 +14,7 @@ import {StateLibrary} from "@uniswap/v4-core/src/libraries/StateLibrary.sol";
 import {LaunchToken} from "../../src/LaunchToken.sol";
 import {AdamDistributorV2, IStrategyToken} from "../../src/AdamDistributorV2.sol";
 import {DeployAdamExtension} from "../../script/DeployAdamExtension.s.sol";
+import {DeployAdam} from "../../script/DeployAdam.s.sol";
 
 interface IStrategyAdmin {
     function owner() external view returns (address);
@@ -43,7 +44,7 @@ contract IMDSTRForkTest is Test {
     address internal bob = makeAddr("recipientEOA");
 
     function setUp() public {
-        vm.createSelectFork("https://eth-pokt.nodies.app", 26_127_182);
+        vm.createSelectFork("https://mainnet.gateway.tenderly.co", 26_127_182);
         key = PoolKey(Currency.wrap(address(0)), Currency.wrap(IMDSTR), 0, 60, IHooks(HOOK));
         adam = new LaunchToken(); // local fork fixture only
         distributor = new AdamDistributorV2(
@@ -145,5 +146,38 @@ contract IMDSTRForkTest is Test {
         vm.prank(alice);
         distributor.claim();
         assertApproxEqAbs(IERC20(IMDSTR).balanceOf(alice), got, 1);
+    }
+
+    function testAuditFreshTokenExtensionThenHookOnlySingleSidedLaunch() public {
+        LaunchToken fresh = new LaunchToken();
+        DeployAdamExtension extension = new DeployAdamExtension();
+        DeployAdamExtension.Config memory c = extension.mainnetConfig(
+            address(fresh), address(extension), bob, block.timestamp + 1 days, keccak256("audit fork policy")
+        );
+        c.funder = address(this);
+        fresh.approve(address(extension), 110_000_000e18);
+        DeployAdamExtension.Deployment memory e = extension.deploy(c);
+        DeployAdam hookScript = new DeployAdam();
+        fresh.transfer(address(hookScript), 890_000_000e18);
+        DeployAdam.Config memory h =
+            hookScript.mainnetConfig(address(hookScript), bob, address(hookScript), address(fresh));
+        h.treasury = address(e.treasury);
+        h.create2Deployer = address(hookScript);
+        h.liquidityAdam = 890_000_000e18;
+        DeployAdam.Deployment memory d = hookScript.deployContracts(h);
+        uint256 ethBefore = MANAGER.balance;
+        hookScript.launchPool(h, d);
+        assertEq(address(d.distributor), address(e.distributor));
+        assertEq(d.hook.treasury(), address(e.treasury));
+        assertEq(uint160(address(d.hook)) & 0x3fff, 0x20cc);
+        assertEq(fresh.balanceOf(address(e.nftClaim)), 110_000_000e18);
+        assertEq(MANAGER.balance, ethBefore, "ADAM-only LP requires no ETH");
+        uint256 dust = fresh.balanceOf(address(hookScript));
+        assertLt(dust, 1e9, "LP rounding leaves less than one billionth of an ADAM");
+        assertEq(fresh.balanceOf(MANAGER) + dust, 890_000_000e18);
+        (uint160 price, int24 tick,,) = pm.getSlot0(d.key.toId());
+        assertGt(price, 0);
+        assertEq(tick, h.initialTick);
+        assertEq(pm.getLiquidity(d.key.toId()), 0, "range below current token1/token0 tick");
     }
 }
