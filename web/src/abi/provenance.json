@@ -1,0 +1,123 @@
+[
+  {
+    "name": "token",
+    "address": "0x0eB84279EFF71548Ac5212Ce17760B1E54692825",
+    "url": "https://sourcify.dev/server/v2/contract/1/0x0eB84279EFF71548Ac5212Ce17760B1E54692825?fields=abi,sources",
+    "sha256": "f8b0fe09c4027c7fd8e116bb6133dbd725760c63a7195344a4e935e0a0f53ad8",
+    "match": "match",
+    "chainId": "1",
+    "verifiedAt": "2026-10-05T20:53:28Z",
+    "creationMatch": "match",
+    "runtimeMatch": "match"
+  },
+  {
+    "name": "oracle",
+    "address": "0x15D85339aaC34C44d12a7df5Bbeb43BAdA1ddf6b",
+    "url": "https://sourcify.dev/server/v2/contract/1/0x15D85339aaC34C44d12a7df5Bbeb43BAdA1ddf6b?fields=abi,sources",
+    "sha256": "75e2561832ba9fc0fb2b05798470baceb07bc5060b884877002f16607da7015a",
+    "match": "match",
+    "chainId": "1",
+    "verifiedAt": "2026-10-05T20:54:58Z",
+    "creationMatch": "match",
+    "runtimeMatch": "match"
+  },
+  {
+    "name": "staking",
+    "address": "0x2DE7e18F40fbf46aF66c8Bc34aF14faD5f77180A",
+    "url": "https://sourcify.dev/server/v2/contract/1/0x2DE7e18F40fbf46aF66c8Bc34aF14faD5f77180A?fields=abi,sources",
+    "sha256": "d6b6db32ffdf480ec65bcd4ac4db7af7918c4fc7042d9844bb403c45df2d48a9",
+    "match": "match",
+    "chainId": "1",
+    "verifiedAt": "2026-10-05T20:53:48Z",
+    "creationMatch": "match",
+    "runtimeMatch": "match"
+  },
+  {
+    "name": "claim",
+    "address": "0xB8A3376F2b6A95418074Ac5669A2A5a6f028BD4C",
+    "url": "https://sourcify.dev/server/v2/contract/1/0xB8A3376F2b6A95418074Ac5669A2A5a6f028BD4C?fields=abi,sources",
+    "sha256": "bf48a45165f79e2312b4f02a10148412b6eef2902a1bc01515d71b246e5317b0",
+    "match": "match",
+    "chainId": "1",
+    "verifiedAt": "2026-10-05T20:53:52Z",
+    "creationMatch": "match",
+    "runtimeMatch": "match"
+  },
+  {
+    "name": "treasury",
+    "address": "0x322706a008Dd02cb17BB28604e7fC6B14d5a501F",
+    "url": "https://sourcify.dev/server/v2/contract/1/0x322706a008Dd02cb17BB28604e7fC6B14d5a501F?fields=abi,sources",
+    "sha256": "c87d36ff77460fda7d468f073b4fb57fb3bdb0bee3da658080a97c5ae5ea5e53",
+    "match": "match",
+    "chainId": "1",
+    "verifiedAt": "2026-10-05T20:54:05Z",
+    "creationMatch": "match",
+    "runtimeMatch": "match"
+  },
+  {
+    "name": "hook",
+    "address": "0x8E406c6C6cf6cfb859Ca7de009C66b18560A20cc",
+    "url": "https://sourcify.dev/server/v2/contract/1/0x8E406c6C6cf6cfb859Ca7de009C66b18560A20cc?fields=abi,sources",
+    "sha256": "5c287c99126a5b697dbb2bb1dd8da9d8a336d2616a4603cc4722bf4397847f4a",
+    "match": "match",
+    "chainId": "1",
+    "verifiedAt": "2026-10-05T20:54:17Z",
+    "creationMatch": "match",
+    "runtimeMatch": "match"
+  },
+  {
+    "name": "position",
+    "address": "0xbd216513d74c8cf14cf4747e6aaa6420ff64ee9e",
+    "url": "https://sourcify.dev/server/v2/contract/1/0xbd216513d74c8cf14cf4747e6aaa6420ff64ee9e?fields=abi,sources",
+    "sha256": "276090bcaabed43bd217ab407a4b8678a5caac2ad2e5a6fb84b1a30cf290f034",
+    "match": "match",
+    "chainId": "1",
+    "verifiedAt": "2026-02-05T00:34:27Z",
+    "creationMatch": "match",
+    "runtimeMatch": "match"
+  },
+  {
+    "name": "stateView",
+    "address": "0x7ffe42c4a5deea5b0fec41c94c136cf115597227",
+    "url": "https://sourcify.dev/server/v2/contract/1/0x7ffe42c4a5deea5b0fec41c94c136cf115597227?fields=abi,sources",
+    "sha256": "00c94f5ef16d900e45bdb7eef7c34081b85b3447bbd8807196f8850484462590",
+    "match": "match",
+    "chainId": "1",
+    "verifiedAt": "2026-02-05T00:35:14Z",
+    "creationMatch": "match",
+    "runtimeMatch": "match"
+  },
+  {
+    "name": "multicall",
+    "address": "0xcA11bde05977b3631167028862bE2a173976CA11",
+    "url": "https://sourcify.dev/server/v2/contract/1/0xcA11bde05977b3631167028862bE2a173976CA11?fields=abi,sources",
+    "sha256": "8b601c23e827057eee4ec710ac92d77c66e694905c8b203a84fb62f734b39dab",
+    "match": "exact_match",
+    "chainId": "1",
+    "verifiedAt": "2024-08-08T11:19:59Z",
+    "creationMatch": "exact_match",
+    "runtimeMatch": "exact_match"
+  },
+  {
+    "name": "imdNft",
+    "address": "0x0000ec93127baa929e58e97dd0095a2bfb38ec1d",
+    "url": "https://sourcify.dev/server/v2/contract/1/0x0000ec93127baa929e58e97dd0095a2bfb38ec1d?fields=abi,sources",
+    "sha256": "f513980593f285f4dac8cf62924dea9cba4d2a0f76f6520a704c4ba68651a4cb",
+    "match": "match",
+    "chainId": "1",
+    "verifiedAt": "2026-05-14T01:34:25Z",
+    "creationMatch": "match",
+    "runtimeMatch": "match"
+  },
+  {
+    "name": "pepeNft",
+    "address": "0x999ce0ce8c5f7661e0c74a568ffe27ceb9177bdb",
+    "url": "https://sourcify.dev/server/v2/contract/1/0x999ce0ce8c5f7661e0c74a568ffe27ceb9177bdb?fields=abi,sources",
+    "sha256": "5016b09a5b7ad6d22e92fd3612e5566f2f9f9b46cf5969d5f028b99988d9954b",
+    "match": "exact_match",
+    "chainId": "1",
+    "verifiedAt": "2026-09-26T00:08:00Z",
+    "creationMatch": "exact_match",
+    "runtimeMatch": "exact_match"
+  }
+]

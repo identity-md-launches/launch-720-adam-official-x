@@ -1,0 +1,10 @@
+{
+  "completeSnapshotGzipTarBytes": 3949732,
+  "limitBytes": 8388608,
+  "allSubmissionFileBytes": 7972797,
+  "fileCount": 574,
+  "forbiddenPackagingFiles": [],
+  "exportMatchesIpfsManifest": true,
+  "previousReadmePreserved": true,
+  "note": "Both the uncompressed complete submitted tree and a gzip tar of it fit the byte budget. Exact history bundle generation is unavailable: shallow/promisor history would require writing read-only Git metadata. No Git metadata changed."
+}

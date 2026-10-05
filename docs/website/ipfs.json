@@ -1,0 +1,90 @@
+{
+  "cid": "bafybeihbhzlu3zx6s65nnqseitmd5d6fjsuqdyygv6dhwxdxjcrepdgoqe",
+  "ipfsUrl": "ipfs://bafybeihbhzlu3zx6s65nnqseitmd5d6fjsuqdyygv6dhwxdxjcrepdgoqe/",
+  "gatewayUrl": "https://ipfs.io/ipfs/bafybeihbhzlu3zx6s65nnqseitmd5d6fjsuqdyygv6dhwxdxjcrepdgoqe/",
+  "status": "prepared_not_pinned",
+  "hosting": "No IPFS publisher, persistent node, or pinning credentials were provided. This address is not claimed to be publicly available.",
+  "car": "docs/website/adam-site.car",
+  "carBytes": 1335935,
+  "carSha256": "5e4b97edc88ce98fc81ec30a38c2ac77560bf4efe6eabde72576d0cf060ced94",
+  "blocks": 21,
+  "reimportedFiles": 14,
+  "format": "UnixFS directory, CIDv1, SHA-256, raw leaves, default balanced layout and 262144-byte chunks",
+  "tools": {
+    "ipfs-unixfs-importer": "16.1.4",
+    "@ipld/car": "5.4.2",
+    "ipfs-unixfs-exporter": "15.0.4"
+  },
+  "files": [
+    {
+      "path": "assets/archivo-black-latin-BTVu2TQR.woff2",
+      "bytes": 18604,
+      "sha256": "25f33e61cf995abd6be62931cf03bf427286259177b43618cc410ee0157cfd30"
+    },
+    {
+      "path": "assets/evm-tXuTopQk.js",
+      "bytes": 259710,
+      "sha256": "d9f322a69f1db1fb5d1c6adf1c1ce92c992084b7c69ac22906e96ad09a461774"
+    },
+    {
+      "path": "assets/index-C5bjcKJi.js",
+      "bytes": 321180,
+      "sha256": "bd8e1dda1e8cb9eb3a0b19db19d01678e10e463f7cc9bf60e486cff17beddae1"
+    },
+    {
+      "path": "assets/index-CEL_3Zg4.css",
+      "bytes": 19790,
+      "sha256": "e9d2d68b0ecba2b526e6b8ac0dff0f81e41667f2d6feb0aa932b9d32b7ad2764"
+    },
+    {
+      "path": "assets/react-Dfoqj1Wf.js",
+      "bytes": 11685,
+      "sha256": "aa9bc3a753caf2a50613b0e80debaf799be56043a3d34ed7bb6a326bc569d26a"
+    },
+    {
+      "path": "fonts/archivo-black-latin.woff2",
+      "bytes": 18604,
+      "sha256": "25f33e61cf995abd6be62931cf03bf427286259177b43618cc410ee0157cfd30"
+    },
+    {
+      "path": "fonts/OFL.txt",
+      "bytes": 4314,
+      "sha256": "18aabf190848725e2576eefb5c29ba06aac1029d02132252a7f312eac2e50cf3"
+    },
+    {
+      "path": "images/adam-banner.jpg",
+      "bytes": 131848,
+      "sha256": "67a4b37deb6dc74876ea9b5ffbc2419c53f930b7147e78929a03d2bc0ebc21b2"
+    },
+    {
+      "path": "images/adam.jpg",
+      "bytes": 42153,
+      "sha256": "54ae38750c358bf283fb8cbf287db0fca4e9aa08bfded9731b21ffb75def2231"
+    },
+    {
+      "path": "images/rhynotic-banner.jpg",
+      "bytes": 355036,
+      "sha256": "a0108f8a52008eec3361f864931cc7daf62e57b485496441d1f01d7c87802c04"
+    },
+    {
+      "path": "images/rhynotic.jpg",
+      "bytes": 44674,
+      "sha256": "ef47f35de3b6f7e03523935c1cb2bf3609ffd953bae7d0727236ed37f934ea0d"
+    },
+    {
+      "path": "images/surf-banner.jpg",
+      "bytes": 93885,
+      "sha256": "270ebca5efc2b2d839b70da722aaa5da24913091c89fc8042c6232e2e36d9ea7"
+    },
+    {
+      "path": "images/surf.jpg",
+      "bytes": 30145,
+      "sha256": "b893ecb5b76aa50a31ae0f5380529b83b2442e0263962c6839ffe4b8d7505bef"
+    },
+    {
+      "path": "index.html",
+      "bytes": 794,
+      "sha256": "98b42453e844b48aa472cf6f0bb44520db8f08821365c4167158b04357fd00ca"
+    }
+  ]
+}

@@ -1,0 +1,166 @@
+{
+  "mode": "Mock injected wallet, mock RPC; zero broadcasts",
+  "checks": [
+    "Injected wallet connection and explicit chain switch",
+    "Invalid stake amount never prompts wallet",
+    "Keyboard stake flow: field error focus, exact approval, receipt wait, then stake",
+    "Unstake and exit verified payloads",
+    "Independent IMD and PNKSTR reward claims",
+    "IMDSTR quote, 1% minimum output and deadline",
+    "Keeper process and recipient-bound deferred claim",
+    "Complete Multicall ownership range and per-NFT entitlements",
+    "Claim & Stake batches use correct collection enum and IDs",
+    "Ordinary batched NFT claim",
+    "Stake lock disables principal withdrawal",
+    "Wallet rejection is recoverable",
+    "Relayer gate, API mapping, validation, two-argument submit and acceptance log",
+    "Oracle false result prevents report submission",
+    "Account changes clear NFTs and hide relayer controls",
+    "No uncaught errors during wallet flows"
+  ],
+  "errors": [],
+  "writes": [
+    {
+      "hash": "0x0000000000000000000000000000000000000000000000000000000000000001",
+      "contract": "token",
+      "fn": "approve",
+      "args": [
+        "0x2DE7e18F40fbf46aF66c8Bc34aF14faD5f77180A",
+        "2000000000000000000"
+      ]
+    },
+    {
+      "hash": "0x0000000000000000000000000000000000000000000000000000000000000002",
+      "contract": "staking",
+      "fn": "stake",
+      "args": [
+        "2000000000000000000"
+      ]
+    },
+    {
+      "hash": "0x0000000000000000000000000000000000000000000000000000000000000003",
+      "contract": "staking",
+      "fn": "unstake",
+      "args": [
+        "2000000000000000000"
+      ]
+    },
+    {
+      "hash": "0x0000000000000000000000000000000000000000000000000000000000000004",
+      "contract": "staking",
+      "fn": "exit"
+    },
+    {
+      "hash": "0x0000000000000000000000000000000000000000000000000000000000000005",
+      "contract": "staking",
+      "fn": "claimReward",
+      "args": [
+        "0xD34a99Bc0f67aE1bbd63C660e6d0b0dd03E263B7"
+      ]
+    },
+    {
+      "hash": "0x0000000000000000000000000000000000000000000000000000000000000006",
+      "contract": "staking",
+      "fn": "claimReward",
+      "args": [
+        "0xc50673EDb3A7b94E8CAD8a7d4E0cD68864E33eDF"
+      ]
+    },
+    {
+      "hash": "0x0000000000000000000000000000000000000000000000000000000000000007",
+      "contract": "staking",
+      "fn": "claimIMDSTR",
+      "args": [
+        "10000000000000000",
+        "12221550000000000000000",
+        "1791236047"
+      ]
+    },
+    {
+      "hash": "0x0000000000000000000000000000000000000000000000000000000000000008",
+      "contract": "treasury",
+      "fn": "process"
+    },
+    {
+      "hash": "0x0000000000000000000000000000000000000000000000000000000000000009",
+      "contract": "treasury",
+      "fn": "claimKeeper",
+      "args": [
+        "0x000000000000000000000000000000000000dEaD"
+      ]
+    },
+    {
+      "hash": "0x000000000000000000000000000000000000000000000000000000000000000a",
+      "contract": "claim",
+      "fn": "claimAndStake",
+      "args": [
+        0,
+        [
+          "0",
+          "1999"
+        ]
+      ]
+    },
+    {
+      "hash": "0x000000000000000000000000000000000000000000000000000000000000000b",
+      "contract": "claim",
+      "fn": "claimAndStake",
+      "args": [
+        1,
+        [
+          "1",
+          "1178"
+        ]
+      ]
+    },
+    {
+      "hash": "0x000000000000000000000000000000000000000000000000000000000000000c",
+      "contract": "claim",
+      "fn": "claim",
+      "args": [
+        0,
+        [
+          "0",
+          "1999"
+        ]
+      ]
+    },
+    {
+      "hash": "0x000000000000000000000000000000000000000000000000000000000000000d",
+      "contract": "claim",
+      "fn": "claim",
+      "args": [
+        1,
+        [
+          "1",
+          "1178"
+        ]
+      ]
+    },
+    {
+      "hash": "0x000000000000000000000000000000000000000000000000000000000000000e",
+      "contract": "oracle",
+      "fn": "submit",
+      "args": [
+        {
+          "requestId": "0x4dd4761573584dd5aee8c56225fc6cce00000000000000000000000000000000",
+          "chainId": "1",
+          "questionHash": "0xabababababababababababababababababababababababababababababababab",
+          "answerType": 3,
+          "answer": "0x00000000000000000000000000000000000000000000000000000000000000d5",
+          "figure": "213",
+          "fromBlock": "1",
+          "toBlock": "2",
+          "blockHash": "0xabababababababababababababababababababababababababababababababab",
+          "panelJobId": "0xabababababababababababababababababababababababababababababababab",
+          "panelSize": 5,
+          "quorum": 4,
+          "agreed": 4,
+          "issuedAt": "1791235436",
+          "expiresAt": "1791236446"
+        },
+        "0x2222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222"
+      ]
+    }
+  ]
+}

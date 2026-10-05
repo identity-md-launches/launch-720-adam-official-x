@@ -1,0 +1,14 @@
+import type { Abi } from 'viem';
+import token from './abi/token.json';
+import oracle from './abi/oracle.json';
+import staking from './abi/staking.json';
+import claim from './abi/claim.json';
+import treasury from './abi/treasury.json';
+import hook from './abi/hook.json';
+import position from './abi/position.json';
+import stateView from './abi/stateView.json';
+import multicall from './abi/multicall.json';
+import imdNft from './abi/imdNft.json';
+import pepeNft from './abi/pepeNft.json';
+export const abis = {token,oracle,staking,claim,treasury,hook,position,stateView,multicall,imdNft,pepeNft} as unknown as Record<'token'|'oracle'|'staking'|'claim'|'treasury'|'hook'|'position'|'stateView'|'multicall'|'imdNft'|'pepeNft',Abi>;
+export type Contract = keyof typeof abis;

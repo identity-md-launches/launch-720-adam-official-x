@@ -1,0 +1,84 @@
+{
+  "mode": "Production export; live read-only RPC, no wallet",
+  "checks": [
+    "Live mainnet snapshot rendered",
+    "Bundled Archivo font loaded",
+    "No page overflow at 1440px",
+    "No page overflow at 820px",
+    "No page overflow at 390px",
+    "No page overflow at 320px",
+    "Hash navigation at IPFS-style subpath",
+    "Missing wallet recovery message",
+    "Theme switch and persisted theme",
+    "Complete fee history and all 3,178 NFT claimed mappings loaded",
+    "Copy contract address feedback",
+    "Reduced motion disables button transforms",
+    "No uncaught application errors"
+  ],
+  "errors": [],
+  "failed": [],
+  "focus": {
+    "tag": "A",
+    "text": "The story",
+    "outline": "solid"
+  },
+  "totals": "Fee history complete through block 26128830. Claims through block 26128830.",
+  "contrast": [
+    {
+      "selector": "body",
+      "foreground": "rgb(11, 40, 56)",
+      "background": "rgb(240, 240, 240)",
+      "ratio": 13.403156373947901
+    },
+    {
+      "selector": ".hero p",
+      "foreground": "rgb(71, 97, 108)",
+      "background": "rgb(240, 240, 240)",
+      "ratio": 5.768751208712875
+    },
+    {
+      "selector": ".primary",
+      "foreground": "rgb(255, 255, 255)",
+      "background": "rgb(16, 80, 112)",
+      "ratio": 8.737379811534796
+    },
+    {
+      "selector": ".split-card",
+      "foreground": "rgb(240, 240, 240)",
+      "background": "rgb(16, 80, 112)",
+      "ratio": 7.666985205999565
+    },
+    {
+      "selector": ".muted",
+      "foreground": "rgb(71, 97, 108)",
+      "background": "rgb(255, 255, 255)",
+      "ratio": 6.574131682076665
+    }
+  ],
+  "darkColors": [
+    {
+      "selector": "body",
+      "foreground": "rgb(240, 240, 240)",
+      "background": "rgb(13, 32, 43)",
+      "ratio": 14.641125897455776
+    },
+    {
+      "selector": ".hero p",
+      "foreground": "rgb(171, 200, 213)",
+      "background": "rgb(13, 32, 43)",
+      "ratio": 9.497935343143002
+    },
+    {
+      "selector": ".primary",
+      "foreground": "rgb(11, 40, 56)",
+      "background": "rgb(112, 176, 208)",
+      "ratio": 6.4078915385215165
+    },
+    {
+      "selector": ".muted",
+      "foreground": "rgb(171, 200, 213)",
+      "background": "rgb(20, 47, 62)",
+      "ratio": 7.938130407496172
+    }
+  ]
+}
