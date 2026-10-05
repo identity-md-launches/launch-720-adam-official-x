@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-10-05 — daily IMD oracle compatibility
+
+- Removed the immutable questionHash pin; the per-run hash remains signed and can change with each pinned block window.
+- Added immutable relayer authorization with OnlyRelayer() and configurable EIP-712 domainVerifyingContract (zero selects the oracle itself). Domain introspection and digest use the same current chain and effective address. Existing signature, answer, quorum, time, replay, clamp and fallback checks remain.
+- Updated DeployAdamExtension.Config and mainnetConfig: relayer `0x087Bada60BB18d1667F03a8BA6b2aE5394E0E2C5`, website domain `0x37bfb8ac7c960e558657871d41ca70e07e7dbfff`, no questionHash argument; reject zero signer/relayer before deployment.
+- Added both-domain success/failure and changing-window fuzz coverage, independent signing/domain checks, relayer rejection/state preservation and deployment defaults. The saved real IMD signature now verifies at a normally deployed oracle without code etching.
+- Updated README, heartbeat, checklist and review with constructor parameters, shared-domain trust and relayer policy/monitoring responsibilities. No broadcast; token, hook, treasury/distributor/NFT economics, build configuration and dependencies are unchanged.
+
 ## 2026-10-05 — stakeFor griefing fix and post-audit review
 
 - Restricted DistributorV2.stakeFor to its immutable NFTClaim address with OnlyNFTClaim(); holders use stake() for themselves. NFT claimAndStake retains the claimant's 24-hour lock and exact allowance handling.

@@ -16,11 +16,11 @@ New coverage:
 | Suite | Coverage |
 |---|---|
 | NFTClaim | daily boundaries, launch/expiry, current ownership, transfer of remaining rights, operator rejection, invalid/post-snapshot IDs, atomic batches, duplicates, claim-and-stake, exclusions, burned IDs, burn deadline, unlock conservation fuzz |
-| AdamSplitOracle | signed weights, clamping, sum/bounds fuzz, malformed ABI fuzz, signature/chain/domain/question/reason failures, quorum, future/stale/expired reports, monotonic/replay guards, exact 26h boundary, equal fallback |
-| OraclePublicVector | exact EIP-712 compatibility with a published IMD v2 signature, and rejection as an unrelated reward report |
+| AdamSplitOracle | signed weights, clamping, sum/bounds fuzz, malformed ABI fuzz, signature/chain/domain/reason and signed-question tampering failures, relayer-only access, independent EIP-712 encoding, changing daily question hashes, both self and configured domains, quorum, future/stale/expired reports, monotonic/replay guards, exact 26h boundary, equal fallback |
+| OraclePublicVector | exact EIP-712 compatibility with a published IMD v2 signature using an explicit website domain without code etching, and rejection of its scalar answer |
 | AdamExtension | all three legs, pull rewards/team, buy-on-claim, wallet transfer lock, minOut/deadline rollback, unauthorized claims, direct switch, old ETH claims after switch, stale split, retries/three-leg reroute, revoked whitelist, callback guards, backlog/new staker accounting, bounty/conservation fuzz |
 | ExtensionAdversarial | NFT stake reentry, keeper reentry, independently claimable assets after token relock, principal availability, two-staker ETH conservation fuzz |
-| ExtensionDeploy | existing token/supply preservation, exactly 11% funded, mutual address wiring, immutable NFT exclusion, signer simulation via run(Config), both funding paths, wrong chain/missing token/invalid snapshot failures |
+| ExtensionDeploy | existing token/supply preservation, exactly 11% funded, mutual address wiring, immutable NFT exclusion, signer simulation via run(Config), both funding paths, wrong chain/missing token/invalid snapshot/zero signer/zero relayer failures, both domain modes and mainnet oracle defaults |
 | IMDSTRFork | block 26,127,182: pool key/state/liquidity, proxy implementation/hook, onchain NFT counts, PoolManager not whitelisted, EOA buy-on-claim, exact 10% hook tax from raw Swap versus net delivery, wallet InvalidTransfer(), simulated owner whitelist/direct distribution |
 
 All original token/hook/distributor/treasury, adversarial, fuzz and invariant suites remain. The parent mainnet suite retains block 26,126,549 and now uses an explicit RPC instead of reading the environment. It covers IMD/PNKSTR tax/floors, original hooked single-sided launch and fee/staking integration.
@@ -57,3 +57,9 @@ Final remediation results: **179 offline tests passed** on both the normal run a
 - `IMDSTRFork`: real NFT owner claim-and-stake succeeds, dust staking fails, early principal withdrawal fails and exact-boundary withdrawal succeeds. LP checks also reject fee collection, the no-unlock action path, burning, transfer and approval while preserving liquidity and dead ownership.
 
 Current validation results are in [REVIEW.md](../REVIEW.md); preceding counts describe earlier jobs.
+
+## Daily oracle compatibility
+
+The shared oracle suite runs with a zero/self domain and with the explicit website domain. It covers independent EIP-712 signing and domain introspection, all domain fields, chain changes, distinct deployer/signer/relayer roles, unauthorized-call state preservation, changing daily question hashes, tampered signed hashes, replay/issuance ordering and the retained report guards. The public signature fixture uses a normal deployment with the configured domain. Extension deployment tests validate the mainnet defaults and reject zero signer/relayer.
+
+`forge build --offline`, `forge test --offline`, `forge fmt --check` and `git diff --check` pass. The default suite has **226 passing tests across 28 suites**; the full rerun with `--fuzz-seed 0x20261005 --fuzz-runs 1024` also passes. Environment getters in oracle tests avoid optimizer reuse across simulated chain/time/block changes. Existing network fork call sites compile but were not rerun; prior fork counts above remain historical. See the daily-oracle section of [REVIEW.md](../REVIEW.md) for the final checks and limitations.

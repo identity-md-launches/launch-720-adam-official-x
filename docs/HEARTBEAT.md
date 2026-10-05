@@ -2,15 +2,17 @@
 
 Official X: https://x.com/IaMaDamIMD
 
-Protocol: [IMD oracle v2](https://imd.fun/docs/#oracle) and [request schema](https://imd.fun/docs/#oracle-body), read 2026-10-05. The attester returned by `GET https://api.imd.fun/oracle/requests?limit=1` was `0x5598aa9146215bc13eb26f2c692ad1461fd32982`. The deployer must independently confirm it before signing deployment. The contract has no signer-rotation power.
+Protocol: [IMD oracle v2](https://imd.fun/docs/#oracle) and [request schema](https://imd.fun/docs/#oracle-body), recorded by the parent job on 2026-10-05 (not re-queried by this change). The attester returned by `GET https://api.imd.fun/oracle/requests?limit=1` was `0x5598aa9146215bc13eb26f2c692ad1461fd32982`. The deployer must independently confirm it before signing deployment. The contract has no signer-rotation power.
 
 ## Responsibilities and cadence
 
-The project operator funds and schedules one `oracle.request` each day at 00:10 UTC. No job, payment, schedule, signature or transaction was submitted by this assignment. A relayer retrieves the completed attestation and calls `AdamSplitOracle.submit`; anyone can relay. Separate keepers call Treasury `process()` hourly. Report signing belongs to the IMD service, never to the keeper or a language model.
+The project operator funds and schedules one `oracle.request` each day at 00:10 UTC. No job, payment, schedule, signature or transaction was submitted by this assignment. Only the immutable relayer retrieves the completed attestation, verifies the request policy and calls `AdamSplitOracle.submit`. The mainnet preset relayer is `0x087Bada60BB18d1667F03a8BA6b2aE5394E0E2C5`; every other caller reverts with `OnlyRelayer()`, including the IMD signer unless it is also configured as relayer. Separate keepers call Treasury `process()` hourly. Report signing belongs to the IMD service, never to the keeper or a language model.
 
-Before deployment, freeze the complete question and definitions; obtain the service's canonical `questionHash` from the reviewed request/quote workflow. **Do not use keccak256(question text)**: a real public request inspected during development had a different canonical questionHash. Pass that canonical value as the immutable constructor parameter. Confirm repeated windows of this same frozen policy yield the same canonical questionHash. If the service changes the policy identity or rotates its signer, existing contracts safely use equal thirds until a separately reviewed migration. Do not weaken validation to accept arbitrary questions.
+Before deployment, freeze the complete question and definitions. The task's verified API observation establishes that `questionHash` includes the pinned block window and changes on each run. There is **no immutable questionHash check or constructor parameter**. Forward `message.questionHash` exactly as signed, without substituting keccak256(question text) or a prior day's hash. It remains cryptographically committed by the signature.
 
-Set `consumer.chainId` to the deployment chain and `consumer.verifyingContract` to the predicted/new **AdamSplitOracle address**, not the Treasury. The default market observations are mainnet. Current production deployment remains gated by the chain mismatch described in README.
+The relayer must retrieve the originating request and confirm the frozen ADAM policy, definitions, asset order, intended chain, pinned window and matching request/panel IDs before submitting. Log the request, evidence, exact reason, attestation and submission result for each run. Do not accept an unrelated signed allocation just because it has the correct shape. This policy selection is an offchain trust responsibility: a shared signing domain permits reports from other requests and oracle instances, and onchain replay tracking is per instance. The relayer cannot forge the signer's signature but can choose among valid signed reports. Losing the relayer or signer prevents updates; after expiry/26 hours the last split falls back to equal thirds. Neither address nor the configured domain can be rotated in place; changes require a separately reviewed migration.
+
+Set `consumer.chainId` to the deployment chain and `consumer.verifyingContract` to **`oracle.domainVerifyingContract()`**. The mainnet preset uses the task-supplied website default `0x37bfb8ac7c960e558657871d41ca70e07e7dbfff`. For explicit self-domain requests, pass zero as the oracle constructor's domain argument and set the request consumer to the resulting AdamSplitOracle address. Do not send a self-domain signature to an oracle configured for the website default, or vice versa. Inspect the actual signed domain; do not assume the website honored an override. `eip712Domain()` exposes the effective fields. The default market observations are mainnet. Current production deployment remains gated by the chain mismatch described in README.
 
 ## Inputs
 
@@ -47,12 +49,12 @@ Detailed numeric observations and source links belong in the evidence, not in th
   "panelSize": 5,
   "quorum": 4,
   "validForSeconds": 93600,
-  "consumer": {"chainId": 1, "verifyingContract": "<AdamSplitOracle>"},
+  "consumer": {"chainId": 1, "verifyingContract": "0x37bfb8ac7c960e558657871d41ca70e07e7dbfff"},
   "definitions": {"policy": "<frozen policy>", "prices": "<frozen endpoint sampling>", "risks": "<frozen risk rules>", "reason": "<frozen canonical vocabulary>"}
 }
 ```
 
-The operator supplies actual text and addresses before commissioning; definitions each obey the service's 512-character limit (split into additional named definitions as needed). Check the canonical hash and complete template before deployment, not after funding.
+The operator supplies actual text and addresses before commissioning; definitions each obey the service's 512-character limit (split into additional named definitions as needed). Review the complete template and intended signing domain before funding; confirm each returned per-run hash against its originating request without expecting equality across runs.
 
 The report sidecar format is:
 
@@ -70,8 +72,8 @@ The report sidecar format is:
 
 Onchain `answer = abi.encode(bytes32[]([bytes32(uint256(imdBps)), bytes32(uint256(pnkstrBps)), bytes32(uint256(imdstrBps)), keccak256(bytes(reason))]))` is exactly 192 bytes. The API's textual answerType `bytes32[]` must be encoded as uint8 **5** in the Solidity tuple. Use requestId/panelJobId from `message` (left-aligned bytes16 padded to bytes32), not a hash of a UUID string.
 
-EIP-712 domain: `IdentityMD Oracle`, version `2`, deployment chainId, AdamSplitOracle. The exact type string is in `AdamSplitOracle.TYPEHASH`. Solidity verifies the signer, domain, chain, question, answer type/shape/sum, reason, quorum (at least 4 of a panel of at least 5), past block range, nonfuture issuedAt, expiration, maximum 26-hour age, and strictly increasing issuance time. A used reportId cannot replay. Signature checks use OpenZeppelin's low-s recovery.
+EIP-712 domain: `IdentityMD Oracle`, version `2`, current deployment chainId, `oracle.domainVerifyingContract()`. The exact type string is in `AdamSplitOracle.TYPEHASH`. Solidity restricts the caller to the relayer and verifies the signer, domain, chain, signed per-run questionHash integrity, answer type/shape/sum, reason, quorum (panelSize >= 5, quorum >= 4, quorum <= agreed <= panelSize), past block range, nonfuture issuedAt, expiration, maximum 26-hour age, and strictly increasing issuance time. A used reportId cannot replay. Signature checks use OpenZeppelin's low-s recovery.
 
-The contract clamps accepted weights to 1500–7000 and adjusts excess across remaining capacity in IMD/PNKSTR/IMDSTR order, preserving sum 10000. `currentSplit()` returns 3333/3333/3334 if no valid report remains. Invalid submissions emit `ReportRejected` and cannot erase a valid report (otherwise anyone could force fallback). `checkpoint()` emits `SplitUpdated` with the effective weights, reportId, reasonHash and source (0 fallback, 1 signed), and Treasury calls it on every process.
+The contract clamps accepted weights to 1500–7000 and adjusts excess across remaining capacity in IMD/PNKSTR/IMDSTR order, preserving sum 10000. `currentSplit()` returns 3333/3333/3334 if no valid report remains. Invalid reports from the authorized relayer return `false`, emit `ReportRejected` and cannot erase a valid report or consume its request ID. Unauthorized callers revert before report validation. Monitor the returned value or event; transaction success alone does not mean a report was accepted. `checkpoint()` emits `SplitUpdated` with the effective weights, reportId, reasonHash and source (0 fallback, 1 signed), and Treasury calls it on every process.
 
 On outage, disagreement, malformed answer, wrong domain or signature, do not fabricate a signature or overwrite the previous report. Alert the operator; after expiry the equal split applies automatically. This service format is verifiable onchain, so no snapshot-price replacement oracle was needed.

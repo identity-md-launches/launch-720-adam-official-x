@@ -120,9 +120,8 @@ contract IMDSTRForkTest is Test {
 
     function testExtensionScriptRealNFTSnapshotAndOneEthFloor() public {
         DeployAdamExtension script = DeployAdamExtension(deployCode("DeployAdamExtension.s.sol:DeployAdamExtension"));
-        DeployAdamExtension.Config memory c = script.mainnetConfig(
-            address(adam), address(script), bob, block.timestamp + 1 days, keccak256("fork policy fixture")
-        );
+        DeployAdamExtension.Config memory c =
+            script.mainnetConfig(address(adam), address(script), bob, block.timestamp + 1 days);
         c.funder = address(this);
         adam.approve(address(script), 110_000_000e18);
         DeployAdamExtension.Deployment memory d = script.deploy(c);
@@ -173,9 +172,8 @@ contract IMDSTRForkTest is Test {
     function testAuditFreshTokenExtensionThenHookOnlySingleSidedLaunch() public {
         LaunchToken fresh = new LaunchToken();
         DeployAdamExtension extension = DeployAdamExtension(deployCode("DeployAdamExtension.s.sol:DeployAdamExtension"));
-        DeployAdamExtension.Config memory c = extension.mainnetConfig(
-            address(fresh), address(extension), bob, block.timestamp + 1 days, keccak256("audit fork policy")
-        );
+        DeployAdamExtension.Config memory c =
+            extension.mainnetConfig(address(fresh), address(extension), bob, block.timestamp + 1 days);
         c.funder = address(this);
         fresh.approve(address(extension), 110_000_000e18);
         DeployAdamExtension.Deployment memory e = extension.deploy(c);

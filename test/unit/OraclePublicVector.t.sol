@@ -12,10 +12,8 @@ contract OraclePublicVectorTest is Test {
         vm.chainId(1);
         address consumer = address(uint160(0x0037bfb8ac7c960e558657871d41ca70e07e7dbfff));
         address signer = address(uint160(0x005598aa9146215bc13eb26f2c692ad1461fd32982));
-        AdamSplitOracle template =
-            new AdamSplitOracle(signer, 0x39eecf277118e4219d50e4352a2fcf943cf802239c546d54dd4baba53c72d787);
-        vm.etch(consumer, address(template).code);
-        AdamSplitOracle oracle = AdamSplitOracle(consumer);
+        AdamSplitOracle oracle = new AdamSplitOracle(signer, address(this), consumer);
+        assertTrue(address(oracle) != consumer);
         AdamSplitOracle.Attestation memory a;
         a.agreed = 4;
         a.answer = hex"00000000000000000000000000000000000000000000000000000000d5876420";
@@ -35,7 +33,9 @@ contract OraclePublicVectorTest is Test {
         bytes memory signature =
             hex"1cbb40839cc1792682273d8dc0b197c6e227db4224bcd9ab000c023c24d3a58f62e91c62746f7c71dc4e65b796f9b9a4b8f52a926885f1d3ee7de0c8f92e084e1b";
         assertEq(ECDSA.recover(oracle.digest(a), signature), signer);
-        // This signature must never authorize our unrelated bytes32[] reward policy.
+        vm.warp(a.issuedAt);
+        vm.roll(a.toBlock + 1);
+        // A valid v2 signature still cannot authorize a scalar answer for our bytes32[] policy.
         assertFalse(oracle.submit(a, signature, "unrelated report"));
     }
 }

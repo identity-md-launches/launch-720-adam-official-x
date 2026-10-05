@@ -1,5 +1,33 @@
 # ADAM post-audit adversarial review
 
+## 2026-10-05 — daily oracle compatibility change
+
+This section reviews the change from the supplied parent tree (`0b867063b3a2135e9488cb16b529e80bcad61162`). It is an implementer review, not independent audit authority. The sections below it record the prior staking review and its historical validation; their pinned-question description is superseded here. No deployment or broadcast occurred.
+
+**Findings and disposition.** The parent oracle compared every report against one immutable questionHash even though IMD includes the changing pinned window in that hash; successive daily reports could not pass. It also bound the EIP-712 domain to its own address, rejecting requests signed for the website's default consumer. Both are fixed: the signed questionHash remains in the unchanged attestation type/digest, the immutable equality check is removed, `OnlyRelayer()` restricts report selection, and a configured immutable domain address is used explicitly. A zero domain argument resolves to address(this). IERC5267 introspection reports the same effective domain, and the separator follows the current chain ID. OpenZeppelin MessageHashUtils and low-s ECDSA recovery are retained from the unchanged local dependency.
+
+**Scope and retained checks.** Production edits are limited to AdamSplitOracle and DeployAdamExtension's oracle configuration/checks. Signer/relayer must be nonzero; the mainnet preset uses the existing signer plus relayer `0x087Bada60BB18d1667F03a8BA6b2aE5394E0E2C5` and domain `0x37bfb8ac7c960e558657871d41ca70e07e7dbfff`. The latter two values are task-supplied observations, not independently queried live in this change. Every other validity condition remains: answerType 5; canonical dynamic bytes32 array of exactly four words; bps sum 10000; matching nonempty reason of at most 280 bytes; panelSize >= 5, quorum >= 4, quorum <= agreed <= panelSize; chain/past-block checks; nonfuture and strictly increasing issuedAt; age <= 26 hours; expiry; nonzero, unused request ID. Clamp 1500–7000, deterministic sum restoration and equal-thirds fallback are unchanged. Rejected authorized reports return false without changing state; unauthorized callers revert before validation. No token, hook, Treasury, Distributor or NFTClaim source changes were made.
+
+**Trust and operational responsibilities.** The relayer now selects policy offchain: verify the originating request's frozen ADAM question, definitions, asset order, chain and pinned window, then forward its unaltered attestation and exact reason. The per-run questionHash is authenticated, not an onchain policy allowlist. In shared-domain mode a valid report can be accepted by multiple oracle instances with that domain; used IDs are tracked per instance, and only the configured relayer can submit to each. A compromised relayer can choose an unrelated but otherwise-valid signed report; it cannot forge the immutable signer's signature or bypass the remaining guards. Relayer outage/key loss prevents updates and eventually causes fallback. Signer/relayer/domain changes have no in-place setter and need separately reviewed migration. Existing deployments are not upgraded by this source change. The README, heartbeat and checklist record activation parameters and responsibilities.
+
+**Regression evidence.** Both domain modes run the same validation suite, including independently encoded EIP-712 signatures (without using the contract digest), wrong domain name/version/chain/address and signer failures, malformed reports, sums/quorum, time boundaries, replay/monotonic issuance, clamp and fallback. Fuzzed unauthorized callers cannot install or replace a report or consume its ID. Three successive daily windows accept changing arbitrary question hashes, including zero; changing the hash cannot bypass replay or issuedAt ordering, and tampering without a new signature fails. The saved real public IMD v2 signature recovers the existing signer at a normal deployment configured with the website domain, without vm.etch; its scalar answer still cannot become an ADAM split. Deployment tests cover mainnet defaults, both effective domains and zero signer/relayer rejection. Existing fixture and fork call sites use the new constructor/config signature.
+
+**Local validation (final tree).** Foundry 1.8.3, pinned Solidity 0.8.26, unchanged Cancun/via-IR/optimizer settings. Results are local evidence only.
+
+| Command | Result |
+| --- | --- |
+| `forge build --offline` | Passed; full compilation with Solidity 0.8.26, followed by a successful cached final build. |
+| `forge test --offline` | **226 passed, 0 failed, 0 skipped**, 28 default suites, including all existing default tests and invariants. |
+| `forge test --offline --fuzz-seed 0x20261005 --fuzz-runs 1024` | **226 passed, 0 failed, 0 skipped**; new oracle fuzz tests each ran 1,024 cases. |
+| `forge fmt`, `forge fmt --check`, `git diff --check` | Passed. |
+| Protected configuration/dependency diff | Empty. |
+
+The oracle runtime is **6,557 bytes**, below EIP-170's 24,576-byte limit. New tests use Foundry's environment getters across warp/roll/chainId changes to prevent via-IR from reusing simulated environment values; the final runs include these corrections. The missing-zero-domain lint is intentional (zero selects self). Timestamp, bounded-cast and event lints were reviewed: validity/clamp logic is retained, and signature recovery invokes only the ECDSA precompile, with no untrusted callback. Nothing was suppressed or changed in dependencies/build settings.
+
+Fork tests are excluded by the existing default profile; their changed mainnetConfig call sites compiled, but the network fork profile was not executed for this oracle-only change. The earlier fork results below are historical. No live API/RPC request, Slither run or Mythril run is claimed. Independent review before activation remains an operator responsibility.
+
+---
+
 Date: 2026-10-05. Baseline: audited commit `785edda603f9ed41364e08d46ecea440bcc0d6e2`. Reviewed continuation: `da3f7ca13eb874dc0e6210ebcab1eaaa77788bba` plus this assignment's diff. Official X supplied by the requester: https://x.com/IaMaDamIMD.
 
 This is the implementer's adversarial review, not a new independent audit or authorization to deploy. The historical independent audit is preserved in `AUDIT.md`; its permissionless staking, LP ownership and liquidity-default descriptions predate the subsequent changes. Nothing was broadcast, and no live token or application was deployed, replaced or re-minted.

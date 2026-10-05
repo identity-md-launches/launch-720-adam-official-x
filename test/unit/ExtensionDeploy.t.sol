@@ -20,7 +20,8 @@ contract ExtensionDeployTest is ExtensionFixture {
         c.pepeSize = 2;
         c.launch = block.timestamp + 1 days;
         c.signer = vm.addr(ORACLE_PK);
-        c.questionHash = QUESTION;
+        c.relayer = address(this);
+        c.domainVerifyingContract = address(0);
         c.treasury = treasuryConfig();
     }
 
@@ -30,6 +31,9 @@ contract ExtensionDeployTest is ExtensionFixture {
         uint256 supplyBefore = adam.totalSupply();
         uint256 balanceBefore = adam.balanceOf(address(this));
         DeployAdamExtension.Deployment memory d = extension.deploy(c);
+        assertEq(d.oracle.signer(), c.signer);
+        assertEq(d.oracle.relayer(), c.relayer);
+        assertEq(d.oracle.domainVerifyingContract(), address(d.oracle));
         assertEq(address(d.distributor.adam()), address(adam));
         assertEq(adam.totalSupply(), supplyBefore);
         assertEq(adam.balanceOf(address(d.nftClaim)), 110_000_000e18);
@@ -79,6 +83,37 @@ contract ExtensionDeployTest is ExtensionFixture {
         c.pepeSize = 3;
         vm.expectRevert(DeployAdamExtension.InvalidConfiguration.selector);
         extension.deploy(c);
+    }
+
+    function testMainnetOracleDefaultsAndConfiguredDomainDeployment() public {
+        DeployAdamExtension.Config memory c = config();
+        DeployAdamExtension.Config memory preset = extension.mainnetConfig(c.adam, c.creator, bob, c.launch);
+        assertEq(preset.chainId, 1);
+        assertEq(preset.signer, 0x5598Aa9146215Bc13eb26f2c692Ad1461Fd32982);
+        assertEq(preset.relayer, 0x087Bada60BB18d1667F03a8BA6b2aE5394E0E2C5);
+        assertEq(preset.domainVerifyingContract, address(uint160(0x0037bfb8ac7c960e558657871d41ca70e07e7dbfff)));
+        c.signer = preset.signer;
+        c.relayer = preset.relayer;
+        c.domainVerifyingContract = preset.domainVerifyingContract;
+        adam.approve(address(extension), 110_000_000e18);
+        DeployAdamExtension.Deployment memory d = extension.deploy(c);
+        assertEq(d.oracle.signer(), c.signer);
+        assertEq(d.oracle.relayer(), c.relayer);
+        assertEq(d.oracle.domainVerifyingContract(), c.domainVerifyingContract);
+    }
+
+    function testDeployRejectsZeroSignerAndRelayerBeforeFunding() public {
+        DeployAdamExtension.Config memory c = config();
+        uint256 balanceBefore = adam.balanceOf(c.funder);
+        address signer = c.signer;
+        c.signer = address(0);
+        vm.expectRevert(DeployAdamExtension.InvalidConfiguration.selector);
+        extension.deploy(c);
+        c.signer = signer;
+        c.relayer = address(0);
+        vm.expectRevert(DeployAdamExtension.InvalidConfiguration.selector);
+        extension.deploy(c);
+        assertEq(adam.balanceOf(c.funder), balanceBefore);
     }
 
     function testClaimConstructorRejectsNonexcludedAddress() public {

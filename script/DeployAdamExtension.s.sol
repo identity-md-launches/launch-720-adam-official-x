@@ -26,6 +26,9 @@ contract DeployAdamExtension is Script {
     address public constant IMDSTR = 0x80271ce20184e38F4AFe90d4Ca134304d197Aca2;
     address public constant IMDSTR_HOOK = 0x66b05C8eecA9329F7a2332C02Ce3855cfaB72444;
     address public constant ORACLE_SIGNER = 0x5598Aa9146215Bc13eb26f2c692Ad1461Fd32982;
+    address public constant ORACLE_RELAYER = 0x087Bada60BB18d1667F03a8BA6b2aE5394E0E2C5;
+    address public constant ORACLE_DOMAIN_VERIFYING_CONTRACT =
+        address(uint160(0x0037bfb8ac7c960e558657871d41ca70e07e7dbfff));
     uint256 public constant NFT_FUNDING = 110_000_000e18;
 
     struct Config {
@@ -39,7 +42,8 @@ contract DeployAdamExtension is Script {
         uint256 pepeSize;
         uint256 launch;
         address signer;
-        bytes32 questionHash;
+        address relayer;
+        address domainVerifyingContract;
         AdamTreasuryV2.Config treasury;
     }
 
@@ -51,7 +55,7 @@ contract DeployAdamExtension is Script {
     }
     error InvalidConfiguration();
 
-    function mainnetConfig(address existingAdam, address deployer, address team, uint256 launch, bytes32 questionHash)
+    function mainnetConfig(address existingAdam, address deployer, address team, uint256 launch)
         public
         pure
         returns (Config memory c)
@@ -66,7 +70,8 @@ contract DeployAdamExtension is Script {
         c.pepeSize = PEPE_SIZE;
         c.launch = launch;
         c.signer = ORACLE_SIGNER;
-        c.questionHash = questionHash;
+        c.relayer = ORACLE_RELAYER;
+        c.domainVerifyingContract = ORACLE_DOMAIN_VERIFYING_CONTRACT;
         c.treasury.team = team;
         c.treasury.manager = 0x000000000004444c5dc75cB358380D2e3dE08A90;
         c.treasury.keys[0] = PoolKey(
@@ -102,7 +107,7 @@ contract DeployAdamExtension is Script {
     function deploy(Config memory c) public returns (Deployment memory d) {
         if (
             block.chainid != c.chainId || c.adam.code.length == 0 || c.creator == address(0) || c.funder == address(0)
-                || IERC20(c.adam).totalSupply() != 1_000_000_000e18
+                || c.signer == address(0) || c.relayer == address(0) || IERC20(c.adam).totalSupply() != 1_000_000_000e18
                 || keccak256(bytes(IERC20Metadata(c.adam).name())) != keccak256("ADAM")
                 || keccak256(bytes(IERC20Metadata(c.adam).symbol())) != keccak256("ADAM")
                 || IERC20Metadata(c.adam).decimals() != 18 || IERC20(c.adam).balanceOf(c.funder) < NFT_FUNDING
@@ -113,7 +118,7 @@ contract DeployAdamExtension is Script {
         if (_count(c.imdNFT, "totalSupply()") < c.imdSize || _count(c.pepeNFT, "totalMinted()") < c.pepeSize) {
             revert InvalidConfiguration();
         }
-        d.oracle = new AdamSplitOracle(c.signer, c.questionHash);
+        d.oracle = new AdamSplitOracle(c.signer, c.relayer, c.domainVerifyingContract);
         address expectedClaim = vm.computeCreateAddress(c.creator, vm.getNonce(c.creator) + 1);
         d.distributor = new AdamDistributorV2(
             c.adam,

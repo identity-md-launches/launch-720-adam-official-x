@@ -51,7 +51,11 @@ IMDSTR pool: native ETH / `0x80271ce20184e38f4afe90d4ca134304d197aca2`, fee **0*
 
 Anyone calls V2 Treasury `process()`, normally hourly (minimum cooldown 600 seconds). The caller gets **0.5% of newly processed ETH**, once. The remaining 99.5% is split **90% holders / 10% team**. Example: 1 ETH → 0.005 ETH bounty, 0.0995 ETH team, 0.8955 ETH holders. Bounty is charged on new allocation, even if a buy is deferred; retries/reroutes never earn another bounty. A rejecting caller accrues a reserved `keeperOwed` balance and can pull it with `claimKeeper(recipient)`. The team itself calls `payTeam()`. Staker tokens are always pulled by their owners.
 
-Holder allocations use the newest valid IMD Oracle v2 report. Immutable signer and canonical questionHash; 26-hour maximum age; signature, domain, reason hash, panel quorum, expiry and replay checks; weights clamped to **1500–7000 bps each**, summing to 10000. Missing/stale reports give **3333/3333/3334** (last wei goes to IMDSTR). Invalid submissions cannot evict a still-valid signed report. The effective split emits `SplitUpdated(imdBps,pnkstrBps,imdstrBps,reportId,reasonHash,source)` from AdamSplitOracle on processing. `source=0` is fallback, `source=1` is signed. The daily policy favors the weakest 24-hour performer unless liquidity/risk signals intervene; see the complete [heartbeat specification and prompt](docs/HEARTBEAT.md).
+Holder allocations use the newest valid IMD Oracle v2 report. Immutable signer, relayer and EIP-712 domain verifying contract; 26-hour maximum age; signature, domain, reason hash, panel quorum, expiry and replay checks; weights clamped to **1500–7000 bps each**, summing to 10000. Missing/stale reports give **3333/3333/3334** (last wei goes to IMDSTR). Invalid submissions cannot evict a still-valid signed report. The effective split emits `SplitUpdated(imdBps,pnkstrBps,imdstrBps,reportId,reasonHash,source)` from AdamSplitOracle on processing. `source=0` is fallback, `source=1` is signed. The daily policy favors the weakest 24-hour performer unless liquidity/risk signals intervene; see the complete [heartbeat specification and prompt](docs/HEARTBEAT.md).
+
+`AdamSplitOracle(signer, relayer, domainVerifyingContract)` accepts changing daily `questionHash` values because the service includes the pinned block window in that hash. The hash remains part of the signed attestation; it is no longer pinned at construction. Only `relayer()` may call `submit()`, with other callers reverting `OnlyRelayer()`. The relayer must check the complete ADAM question, definitions, asset order and block window against the frozen policy before submitting. Authorized invalid reports return `false` and emit `ReportRejected`; they do not consume a request ID or replace the active split. `checkpoint()` and Treasury `process()` remain permissionless.
+
+The domain is `{name: "IdentityMD Oracle", version: "2", chainId: block.chainid, verifyingContract: domainVerifyingContract()}`. A zero constructor argument selects the new oracle's own address; a nonzero value selects that exact address, including the website default. `eip712Domain()` reports the same effective domain used by `digest()`. In shared-domain mode, signatures are not bound to an individual oracle deployment: replay protection is local to each instance and the immutable relayer is trusted to select the correct requests. A compromised relayer can select any otherwise-valid attestation signed by the immutable signer, including an unrelated policy; it cannot forge signatures or bypass format/quorum/time/bounds checks. Relayer outage causes fallback once the last report expires or becomes stale. None of these three addresses can rotate in place.
 
 All three legs retain independent 1 ETH attempt caps, 3% slippage floors below the greater of checkpoint and spot output after pool fees/hook tax, halving retries down to 1 gwei, and rerouting only after at least four failures spanning three days, without gaps over two hours (or configured cooldown if longer). Dust waits. Rerouting prefers a healthy alternate leg and can change the eventual mix. IMDSTR normally **accrues ETH without swapping**; its automatic swap/floor/retry logic applies once direct mode is enabled. An already-accrued user's ETH cannot be seized or rerouted: they can retry their own claim with suitable slippage if that pool recovers.
 
@@ -59,9 +63,19 @@ Every leg's swap **and** reward notification share an atomic failure boundary. C
 
 ## Deployment and operation
 
-`script/DeployAdamExtension.s.sol` accepts a complete `Config` as arguments; no secrets, environment reads, FFI or filesystem cheatcodes. `mainnetConfig(existingAdam, deployer, team, launch, questionHash)` supplies the observed mainnet defaults. `run(Config)` records the reviewed actions for a manual signer; without an explicit user-run `--broadcast`, Foundry only simulates. This assignment ran tests/simulations only.
+`script/DeployAdamExtension.s.sol` accepts a complete `Config` as arguments; no secrets, environment reads, FFI or filesystem cheatcodes. `mainnetConfig(existingAdam, deployer, team, launch)` supplies the mainnet defaults below. `Config` now has `signer`, `relayer` and `domainVerifyingContract` and no `questionHash` field.
 
-The script validates chain/token identity and fixed supply, checks the funding balance and NFT counters, deploys the oracle and V2 Distributor, predicts/excludes NFTClaim's CREATE address, deploys NFTClaim and V2 Treasury, and funds exactly 11%. The unit suite calls both `deploy(Config)` and `run(Config)` directly with explicit creators. A separate funder must approve exactly 110,000,000 ADAM; when creator=funder the signer transfers its own tokens directly. All components are immutable, so review constructor data and code before funding. Script execution is multiple manual transactions: after any interruption, inspect deployed contracts and completed transfers before resuming.
+| Oracle parameter | Mainnet preset |
+| --- | --- |
+| signer (unchanged) | `0x5598Aa9146215Bc13eb26f2c692Ad1461Fd32982` |
+| relayer | `0x087Bada60BB18d1667F03a8BA6b2aE5394E0E2C5` |
+| domainVerifyingContract | `0x37bfb8ac7c960e558657871d41ca70e07e7dbfff` |
+
+The relayer and website domain are the values supplied by this task; the signer is the inherited preset. This assignment did not re-query the live service. The operator must confirm the actual request's signing domain and signer before activation. The domain address is a signing identifier, not a contract this oracle calls, so no code requirement is imposed. Set `Config.domainVerifyingContract = address(0)` only when the service explicitly signs for the new oracle address.
+
+`run(Config)` records the reviewed actions for a manual signer; without an explicit user-run `--broadcast`, Foundry only simulates. This assignment ran tests/simulations only.
+
+The script rejects zero signer/relayer, validates chain/token identity and fixed supply, checks the funding balance and NFT counters, deploys the oracle and V2 Distributor, predicts/excludes NFTClaim's CREATE address, deploys NFTClaim and V2 Treasury, and funds exactly 11%. The unit suite calls both `deploy(Config)` and `run(Config)` directly with explicit creators. A separate funder must approve exactly 110,000,000 ADAM; when creator=funder the signer transfers its own tokens directly. All components are immutable, so review constructor data and code before funding. Script execution is multiple manual transactions: after any interruption, inspect deployed contracts and completed transfers before resuming.
 
 The old hook's Treasury is immutable. The new Treasury does not take over existing fees automatically. To activate a new fee-bearing pool without changing ADAM, the original `DeployAdam` **hook-only** path accepts the new V2 Treasury in `TREASURY` and the existing token in mandatory `ADAM_TOKEN`; it mines the same AdamHook and can seed a reviewed, ADAM-only position from the owner's remaining balance. The NFT allocation must be reserved first (at most 890,000,000 of the original supply remains for all other uses). `LIQUIDITY_ADAM` now defaults to **890,000,000e18**. An explicit environment override may reduce that amount (atomic units), but zero or more than 890,000,000e18 reverts; insufficient deployer balance also reverts. There is no automatic balance-based reduction.
 
@@ -69,13 +83,13 @@ The hook-only path mints its single-sided LP NFT **directly to `0x00000000000000
 
 Existing pools/positions remain untouched. Legacy V1 simulation helpers retain their historical configurable LP ownership; the production `run()` requires hook-only mode and always burns its LP. No custom pool or liquidity migration was executed here. See the [deployment checklist](docs/DEPLOYMENT_CHECKLIST.md) for operator responsibilities. Frontends/routers must explicitly use the new hooked PoolKey; the factory pool and other hookless pools do not pay these fees.
 
-The deployer records final addresses/PoolKeys and ABIs, verifies code, confirms oracle signer/canonical questionHash and service consumer domain, chooses claim launch time and team beneficiary, funds the heartbeat, and arranges keeper calls. IMDSTR whitelist authority remains with its external token owner. An independent adversarial review remains required before release with real funds. Distributor/Treasury expose immutable ERC-7572 `contractURI()` data URIs; ADAM remains a plain ERC-20. First-party contracts include `@custom:x`.
+The deployer records final addresses/PoolKeys and ABIs, verifies code, confirms the immutable oracle signer/relayer and service consumer domain, assigns offchain policy checks to the relayer, chooses claim launch time and team beneficiary, funds the heartbeat, and arranges keeper calls. IMDSTR whitelist authority remains with its external token owner. An independent adversarial review remains required before release with real funds. Distributor/Treasury expose immutable ERC-7572 `contractURI()` data URIs; ADAM remains a plain ERC-20. First-party contracts include `@custom:x`.
 
 ## Verification
 
 ```sh
-forge build
-forge test
+forge build --offline
+forge test --offline
 forge fmt --check
 FOUNDRY_PROFILE=fork forge test -vv --threads 1 --compute-units-per-second 50
 ```

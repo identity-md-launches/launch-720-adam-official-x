@@ -2,12 +2,13 @@
 pragma solidity 0.8.26;
 
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
+import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
+import {IERC5267} from "@openzeppelin/contracts/interfaces/IERC5267.sol";
 
 /// @title AdamSplitOracle
-/// @notice Verifies IdentityMD Oracle v2 attestations for one immutable question and signer.
+/// @notice Verifies IdentityMD Oracle v2 attestations selected by an immutable relayer and signer.
 /// @custom:x https://x.com/IaMaDamIMD
-contract AdamSplitOracle is EIP712 {
+contract AdamSplitOracle is IERC5267 {
     uint256 public constant MAX_AGE = 26 hours;
     uint16 public constant MIN_BPS = 1500;
     uint16 public constant MAX_BPS = 7000;
@@ -15,7 +16,10 @@ contract AdamSplitOracle is EIP712 {
         "OracleAttestation(bytes32 requestId,uint256 chainId,bytes32 questionHash,uint8 answerType,bytes answer,uint256 figure,uint64 fromBlock,uint64 toBlock,bytes32 blockHash,bytes32 panelJobId,uint16 panelSize,uint16 quorum,uint16 agreed,uint64 issuedAt,uint64 expiresAt)"
     );
     address public immutable signer;
-    bytes32 public immutable questionHash;
+    address public immutable relayer;
+    address public immutable domainVerifyingContract;
+    bytes32 private constant DOMAIN_TYPEHASH =
+        keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
 
     struct Attestation {
         bytes32 requestId;
@@ -47,15 +51,40 @@ contract AdamSplitOracle is EIP712 {
     );
     event ReportRejected(bytes32 indexed reportId);
     error InvalidConfiguration();
+    error OnlyRelayer();
 
-    constructor(address signer_, bytes32 questionHash_) EIP712("IdentityMD Oracle", "2") {
-        if (signer_ == address(0) || questionHash_ == bytes32(0)) revert InvalidConfiguration();
+    constructor(address signer_, address relayer_, address domainVerifyingContract_) {
+        if (signer_ == address(0) || relayer_ == address(0)) revert InvalidConfiguration();
         signer = signer_;
-        questionHash = questionHash_;
+        relayer = relayer_;
+        domainVerifyingContract = domainVerifyingContract_ == address(0) ? address(this) : domainVerifyingContract_;
+    }
+
+    /// @inheritdoc IERC5267
+    function eip712Domain()
+        public
+        view
+        returns (
+            bytes1 fields,
+            string memory name,
+            string memory version,
+            uint256 chainId,
+            address verifyingContract,
+            bytes32 salt,
+            uint256[] memory extensions
+        )
+    {
+        return (hex"0f", "IdentityMD Oracle", "2", block.chainid, domainVerifyingContract, bytes32(0), new uint256[](0));
     }
 
     function digest(Attestation calldata a) public view returns (bytes32) {
-        return _hashTypedDataV4(
+        bytes32 domainSeparator = keccak256(
+            abi.encode(
+                DOMAIN_TYPEHASH, keccak256("IdentityMD Oracle"), keccak256("2"), block.chainid, domainVerifyingContract
+            )
+        );
+        return MessageHashUtils.toTypedDataHash(
+            domainSeparator,
             keccak256(
                 abi.encode(
                     TYPEHASH,
@@ -79,8 +108,9 @@ contract AdamSplitOracle is EIP712 {
         );
     }
 
-    /// @notice Anyone can relay. Invalid submissions cannot erase a still-valid accepted report.
+    /// @notice Only the relayer selects reports. Invalid reports cannot erase a still-valid accepted report.
     function submit(Attestation calldata a, bytes calldata signature, string calldata reason) external returns (bool) {
+        if (msg.sender != relayer) revert OnlyRelayer();
         if (!_valid(a, signature, reason)) {
             emit ReportRejected(a.requestId);
             return false;
@@ -104,11 +134,11 @@ contract AdamSplitOracle is EIP712 {
         returns (bool)
     {
         if (
-            a.requestId == 0 || used[a.requestId] || a.chainId != block.chainid || a.questionHash != questionHash
-                || a.answerType != 5 || a.issuedAt > block.timestamp || a.issuedAt <= issuedAt
-                || block.timestamp - a.issuedAt > MAX_AGE || a.expiresAt < block.timestamp || a.expiresAt < a.issuedAt
-                || a.fromBlock > a.toBlock || a.toBlock >= block.number || a.panelSize < 5 || a.quorum < 4
-                || a.agreed < a.quorum || a.agreed > a.panelSize || a.answer.length != 192 || bytes(reason).length == 0
+            a.requestId == 0 || used[a.requestId] || a.chainId != block.chainid || a.answerType != 5
+                || a.issuedAt > block.timestamp || a.issuedAt <= issuedAt || block.timestamp - a.issuedAt > MAX_AGE
+                || a.expiresAt < block.timestamp || a.expiresAt < a.issuedAt || a.fromBlock > a.toBlock
+                || a.toBlock >= block.number || a.panelSize < 5 || a.quorum < 4 || a.agreed < a.quorum
+                || a.agreed > a.panelSize || a.answer.length != 192 || bytes(reason).length == 0
                 || bytes(reason).length > 280
         ) return false;
         // Canonical ABI bytes32[dynamic] of exactly four words. Check before decoding untrusted bytes.

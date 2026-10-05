@@ -101,7 +101,7 @@ abstract contract ExtensionFixture is LocalV4 {
         nft.mint(bob, 3);
         pepe.mint(alice, 1);
         pepe.mint(bob, 2);
-        oracle = new AdamSplitOracle(vm.addr(ORACLE_PK), QUESTION);
+        oracle = new AdamSplitOracle(vm.addr(ORACLE_PK), address(this), address(0));
         address expected = vm.computeCreateAddress(address(this), vm.getNonce(address(this)) + 1);
         d2 = new AdamDistributorV2(
             address(adam), address(imd), address(pnkstr), address(poolManager), expected, thirdKey, 1 ether
