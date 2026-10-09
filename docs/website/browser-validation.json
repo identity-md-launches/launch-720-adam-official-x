@@ -3,82 +3,115 @@
   "checks": [
     "Live mainnet snapshot rendered",
     "Bundled Archivo font loaded",
+    "Desktop hero video autoplays muted, looped, inline from a local source",
+    "Hero background has a working pause control",
     "No page overflow at 1440px",
-    "No page overflow at 820px",
+    "No page overflow at 900px",
     "No page overflow at 390px",
     "No page overflow at 320px",
+    "Compact viewport shows the hero poster instead of autoplay video",
+    "Mobile menu opens, navigates by hash and closes",
+    "Reduced motion: poster instead of video, reveals shown immediately, no press scale",
+    "Watch card plays on hover, muted by default",
+    "Watch card sound toggle switches muted state",
+    "Watch card keyboard-accessible play/pause button",
+    "Stat cards render counted values after scroll",
     "Hash navigation at IPFS-style subpath",
     "Missing wallet recovery message",
-    "Theme switch and persisted theme",
-    "Complete fee history and all 3,178 NFT claimed mappings loaded",
-    "Copy contract address feedback",
-    "Reduced motion disables button transforms",
+    "Footer contract copy feedback",
+    "Footer lists six contract Etherscan links with copy buttons",
+    "Sampled text pairs on solid backgrounds reach 4.5:1 or better; hero text over video is measured against the dark base only",
     "No uncaught application errors"
   ],
   "errors": [],
   "failed": [],
+  "hero": {
+    "tag": "VIDEO",
+    "paused": false,
+    "muted": true,
+    "loop": true,
+    "playsInline": true,
+    "src": "http://127.0.0.1:43331/preview/video/hero.webm",
+    "ready": 4
+  },
+  "watchLinks": [
+    "https://x.com/IaMaDamIMD/status/2107469324206170244",
+    "https://x.com/IaMaDamIMD/status/2107360470965670193"
+  ],
+  "metrics": [
+    "$0.0001061",
+    "$106,100",
+    "$84,932",
+    "91,032,300"
+  ],
   "focus": {
     "tag": "A",
-    "text": "The story",
-    "outline": "solid"
+    "text": "Stats",
+    "outline": "solid",
+    "color": "rgb(156, 203, 255)"
   },
-  "totals": "Fee history complete through block 26128830. Claims through block 26128830.",
+  "footerExplorer": 6,
   "contrast": [
     {
       "selector": "body",
-      "foreground": "rgb(11, 40, 56)",
-      "background": "rgb(240, 240, 240)",
-      "ratio": 13.403156373947901
+      "foreground": "rgb(243, 245, 249)",
+      "background": "rgb(7, 10, 16)",
+      "ratio": 18.15
     },
     {
-      "selector": ".hero p",
-      "foreground": "rgb(71, 97, 108)",
-      "background": "rgb(240, 240, 240)",
-      "ratio": 5.768751208712875
+      "selector": ".lead",
+      "foreground": "rgb(163, 173, 191)",
+      "background": "rgb(7, 10, 16)",
+      "ratio": 8.76
     },
     {
       "selector": ".primary",
-      "foreground": "rgb(255, 255, 255)",
-      "background": "rgb(16, 80, 112)",
-      "ratio": 8.737379811534796
+      "foreground": "rgb(6, 17, 31)",
+      "background": "rgb(88, 166, 255)",
+      "ratio": 7.51
     },
     {
-      "selector": ".split-card",
-      "foreground": "rgb(240, 240, 240)",
-      "background": "rgb(16, 80, 112)",
-      "ratio": 7.666985205999565
+      "selector": ".accent-panel p",
+      "foreground": "rgb(163, 173, 191)",
+      "background": "rgb(7, 10, 16)",
+      "ratio": 8.76
     },
     {
       "selector": ".muted",
-      "foreground": "rgb(71, 97, 108)",
-      "background": "rgb(255, 255, 255)",
-      "ratio": 6.574131682076665
+      "foreground": "rgb(163, 173, 191)",
+      "background": "rgb(7, 10, 16)",
+      "ratio": 8.76
+    },
+    {
+      "selector": ".site-header nav a",
+      "foreground": "rgb(163, 173, 191)",
+      "background": "rgb(7, 10, 16)",
+      "ratio": 8.76
+    },
+    {
+      "selector": ".eyebrow",
+      "foreground": "rgb(243, 245, 249)",
+      "background": "rgb(7, 10, 16)",
+      "ratio": 18.15
+    },
+    {
+      "selector": ".tagline",
+      "foreground": "rgb(243, 245, 249)",
+      "background": "rgb(7, 10, 16)",
+      "ratio": 18.15
+    },
+    {
+      "selector": ".footer-contracts code",
+      "foreground": "rgb(163, 173, 191)",
+      "background": "rgb(11, 16, 25)",
+      "ratio": 8.42
+    },
+    {
+      "selector": ".badge",
+      "foreground": "rgb(243, 245, 249)",
+      "background": "rgb(7, 10, 16)",
+      "ratio": 18.15
     }
   ],
-  "darkColors": [
-    {
-      "selector": "body",
-      "foreground": "rgb(240, 240, 240)",
-      "background": "rgb(13, 32, 43)",
-      "ratio": 14.641125897455776
-    },
-    {
-      "selector": ".hero p",
-      "foreground": "rgb(171, 200, 213)",
-      "background": "rgb(13, 32, 43)",
-      "ratio": 9.497935343143002
-    },
-    {
-      "selector": ".primary",
-      "foreground": "rgb(11, 40, 56)",
-      "background": "rgb(112, 176, 208)",
-      "ratio": 6.4078915385215165
-    },
-    {
-      "selector": ".muted",
-      "foreground": "rgb(171, 200, 213)",
-      "background": "rgb(20, 47, 62)",
-      "ratio": 7.938130407496172
-    }
-  ]
+  "totalsError": "locator.waitFor: Timeout 150000ms exceeded.\nCall log:\n  - waiting for getByText(/Fee history complete/) to be visible\n"
 }

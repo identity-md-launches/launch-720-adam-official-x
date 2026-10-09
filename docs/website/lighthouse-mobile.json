@@ -1,0 +1,39 @@
+{
+  "tool": "lighthouse 12.8.2",
+  "mode": "mobile preset, simulated slow 4G and 4x CPU, headless Chromium Chrome/154.0.0.0",
+  "page": "dist/index.html served under /preview/ by a local static server",
+  "fetchTime": "2026-10-09T08:12:59.384Z",
+  "withTextCompression": {
+    "scores": {
+      "performance": 95,
+      "accessibility": 100,
+      "best-practices": 100
+    },
+    "metrics": {
+      "first-contentful-paint": "1.6 s",
+      "largest-contentful-paint": "2.2 s",
+      "total-blocking-time": "210 ms",
+      "cumulative-layout-shift": "0",
+      "speed-index": "1.6 s",
+      "interactive": "3.8 s"
+    },
+    "lcpElement": "img.hero-media (poster)"
+  },
+  "withoutTextCompression": {
+    "scores": {
+      "performance": 83,
+      "accessibility": 100,
+      "best-practices": 100
+    },
+    "metrics": {
+      "first-contentful-paint": "2.9 s",
+      "largest-contentful-paint": "3.6 s",
+      "total-blocking-time": "160 ms",
+      "cumulative-layout-shift": "0",
+      "speed-index": "2.9 s",
+      "interactive": "7.3 s"
+    },
+    "lcpElement": "img.hero-media (poster)"
+  },
+  "note": "Same export in both runs; only the server content-encoding differs. Earlier runs during the job scored 92-95 (gzip) and 72-83 (plain)."
+}

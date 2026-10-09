@@ -11,7 +11,7 @@ const address=Object.fromEntries([...config.matchAll(/(\w+):'(0x[0-9a-fA-F]{40})
 const names=['token','oracle','staking','claim','treasury','hook','position','stateView','multicall','imdNft','pepeNft'];
 const abis=Object.fromEntries(await Promise.all(names.map(async n=>[n,JSON.parse(await fs.readFile(path.join(root,`web/src/abi/${n}.json`),'utf8'))])));
 const {chromium}=await import(process.env.PLAYWRIGHT_MODULE||'playwright');
-const mime={'.html':'text/html','.js':'text/javascript','.css':'text/css','.jpg':'image/jpeg','.woff2':'font/woff2','.txt':'text/plain'};
+const mime={'.html':'text/html','.js':'text/javascript','.css':'text/css','.jpg':'image/jpeg','.woff2':'font/woff2','.txt':'text/plain','.mp4':'video/mp4','.webm':'video/webm'};
 const server=http.createServer(async(req,res)=>{try{const name=new URL(req.url,'http://localhost').pathname.replace(/^\/preview\//,'');const file=path.resolve(root,'dist',name||'index.html');if(!file.startsWith(path.join(root,'dist')+path.sep))throw Error();res.writeHead(200,{'content-type':mime[path.extname(file)]||'application/octet-stream'}).end(await fs.readFile(file));}catch{res.writeHead(404).end();}});
 await new Promise(r=>server.listen(0,'127.0.0.1',r));
 const browser=await chromium.launch({headless:true,executablePath:process.env.CHROMIUM_EXECUTABLE,args:['--no-sandbox']});

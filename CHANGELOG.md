@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-10-09 — website redesign (design only)
+
+- Redesigned the ADAM site in `web/` with a dark, cinematic look: full-bleed hero over the official "RISE $ADAM RISE" video (muted, looped, inline, with a pause control and poster fallback on compact screens and under reduced motion), one accent blue taken from ADAM's bandana, Archivo Black display type, glassy panels, count-up stat cards, scroll reveals and hover states without any animation library.
+- Added a Watch section hosting the two other official X videos locally (mp4 H.264 + webm VP9 + first-frame posters, each well under 8 MB): play on hover or tap, muted by default with a sound toggle, keyboard play/pause and a link to each original post. No X embed.
+- Added a sticky compact header with wallet connect and a mobile menu, and a footer with the X link and all six mainnet contract addresses with copy buttons and Etherscan links.
+- Kept every existing feature and contract call unchanged: live stats, oracle split, rewards distributed, cumulative totals, NFT scan/claim/claim-and-stake, stake/unstake/exit, IMD/PNKSTR/IMDSTR claims with quotes, keeper actions and the relayer workspace. Addresses, ABIs, RPC fallbacks and wallet flow logic are untouched; viem now loads as a lazy chunk so the first paint does not wait for it.
+- Removed the light theme (the brief asks for a dark design) and the stale IPFS CAR/manifest from the previous export; the publisher serves the committed `dist/`. Documentation, validation records and DESIGN.md describe the new source. No contract, build configuration or dependency change; nothing broadcast onchain.
+
 ## 2026-10-05 — daily IMD oracle compatibility
 
 - Removed the immutable questionHash pin; the per-run hash remains signed and can change with each pinned block window.

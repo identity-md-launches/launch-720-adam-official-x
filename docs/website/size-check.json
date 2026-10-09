@@ -1,10 +1,54 @@
 {
-  "completeSnapshotGzipTarBytes": 3949732,
   "limitBytes": 8388608,
-  "allSubmissionFileBytes": 7972797,
-  "fileCount": 574,
+  "existingPackBytes": 2831155,
+  "newUniqueBlobRawBytes": 5559664,
+  "newUniqueBlobDeflatedBytes": 4676751,
+  "estimatedBundleBytes": 7507906,
+  "workingTreeFileBytesApprox": 16665466,
+  "fileCountApprox": 618,
+  "videoFiles": [
+    {
+      "file": "hero-480.jpg",
+      "bytes": 14672
+    },
+    {
+      "file": "hero.jpg",
+      "bytes": 35914
+    },
+    {
+      "file": "hero.mp4",
+      "bytes": 803655
+    },
+    {
+      "file": "hero.webm",
+      "bytes": 618595
+    },
+    {
+      "file": "rise.jpg",
+      "bytes": 23756
+    },
+    {
+      "file": "rise.mp4",
+      "bytes": 780122
+    },
+    {
+      "file": "rise.webm",
+      "bytes": 580114
+    },
+    {
+      "file": "staked.jpg",
+      "bytes": 34933
+    },
+    {
+      "file": "staked.mp4",
+      "bytes": 718399
+    },
+    {
+      "file": "staked.webm",
+      "bytes": 521124
+    }
+  ],
+  "allVideosUnder8MiB": true,
   "forbiddenPackagingFiles": [],
-  "exportMatchesIpfsManifest": true,
-  "previousReadmePreserved": true,
-  "note": "Both the uncompressed complete submitted tree and a gzip tar of it fit the byte budget. Exact history bundle generation is unavailable: shallow/promisor history would require writing read-only Git metadata. No Git metadata changed."
+  "note": "Git stores web/public/video and dist/video once (identical blobs). The bundle estimate adds deflated new unique blobs to the packed history reported by git count-objects at job start (2.70 MiB). Stale CAR, IPFS manifest and light-theme screenshot were removed from the tree."
 }

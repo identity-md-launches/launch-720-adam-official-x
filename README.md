@@ -1,12 +1,12 @@
 # ADAM website
 
-The mainnet ADAM site is implemented in `web/`; the production static export is in `dist/`. It includes NFT claims, staking, rewards, keeper actions, live statistics and the authorized relayer workspace. No contract source or deployment was changed. Nothing was broadcast onchain.
+The mainnet ADAM site is implemented in `web/`; the production static export is in `dist/`. It includes NFT claims, staking, rewards, keeper actions, live statistics, the authorized relayer workspace and, since the 2026-10-09 redesign, a video hero and a Watch section built from the official X account's videos. No contract source or deployment was changed. Nothing was broadcast onchain.
 
-**IPFS status: prepared, not hosted.** The deterministic directory CID is `bafybeihbhzlu3zx6s65nnqseitmd5d6fjsuqdyygv6dhwxdxjcrepdgoqe`. The upload-ready [CAR archive](docs/website/adam-site.car) contains the entire site. No publisher connector, persistent IPFS node or pinning credentials were provided. The expected gateway URL is https://ipfs.io/ipfs/bafybeihbhzlu3zx6s65nnqseitmd5d6fjsuqdyygv6dhwxdxjcrepdgoqe/; it is **not claimed to be reachable** until the archive is pinned. See [IPFS manifest](docs/website/ipfs.json) for file hashes and publishing status.
+The redesign is design-only: every contract call, address, statistic and section of the previous site is still present and uses the same `config.ts`, ABIs, RPC fallbacks and wallet flow. The site is dark-only now (the previous light theme and its toggle were removed to match the requested cinematic direction). The design system is documented in [DESIGN.md](DESIGN.md); the review and validation record is in [docs/website/VALIDATION.md](docs/website/VALIDATION.md).
 
 ## Install, preview and rebuild
 
-Node 22 and npm are sufficient. The frontend has its own manifest and lockfile; the existing Foundry configuration and dependencies are untouched.
+Node 22+ and npm are sufficient. The frontend has its own manifest and lockfile (`web/package.json`, `web/package-lock.json`); the existing Foundry configuration and dependencies are untouched.
 
 ```sh
 npm ci --prefix web
@@ -16,15 +16,37 @@ npm run build --prefix web
 npm run preview --prefix web
 ```
 
-Open the Vite preview URL printed by the last command. To preview the exact export at a gateway-like subpath, run `python3 -m http.server 8080` in the repository root and open `http://localhost:8080/dist/index.html`. The page uses section hashes and Vite `base: './'`. It needs no server-side routing. All six requested profile images and the display font are bundled locally. Only live RPC and market/oracle requests need the network.
+Open the Vite preview URL printed by the last command. To preview the exact export at a gateway-like subpath, run `python3 -m http.server 8080` in the repository root and open `http://localhost:8080/dist/index.html`. The page uses section hashes and Vite `base: './'`, so every asset URL is relative and no server-side routing is needed. Fonts, images and videos are bundled locally; only live RPC and market/oracle requests need the network.
 
-With a populated npm cache, `npm ci --prefix web --offline` and `npm run build --prefix web --offline` work without network access; both were run successfully using the worker's cache. A fresh machine needs network access for its initial dependency installation. No npm registry, cache or dependency archive is shipped.
+`npm run build` writes `dist/` (it empties the directory first). Commit `dist/` together with the source after every rebuild: the publisher serves the committed export and does not rebuild.
+
+## Videos
+
+The three videos come from the official X posts and are hosted with the site (no X embed):
+
+| File | Source post | Use |
+| --- | --- | --- |
+| `web/public/video/hero.*` | https://x.com/IaMaDamIMD/status/2107887948394049999 | Hero background: autoplay, muted, loop, playsinline, dark gradient overlay, visible pause control |
+| `web/public/video/rise.*` | https://x.com/IaMaDamIMD/status/2107469324206170244 | Watch card "RISE" |
+| `web/public/video/staked.*` | https://x.com/IaMaDamIMD/status/2107360470965670193 | Watch card "Staked and paid" |
+
+Each original MP4 URL was taken from the public `api.fxtwitter.com/IaMaDamIMD/status/<id>` JSON (highest-bitrate `video/mp4` variant, no login) and downloaded with `curl`. Originals: hero 1280×720 15.0 s, rise 718×1280 14.2 s, staked 720×1280 13.1 s, each about 3 MB. They were re-encoded with ffmpeg for the web and the 8 MiB submission budget: two-pass H.264 (`libx264`, high profile, yuv420p, faststart) and two-pass VP9 (`libvpx-vp9`, Opus audio); the hero has no audio track because it only ever plays muted. The poster is the first frame as JPEG (`hero.jpg` 960×540 plus `hero-480.jpg` for compact screens). Output sizes: hero 804 KB mp4 / 619 KB webm, rise 780 KB / 580 KB, staked 718 KB / 521 KB. The recipe (hero at 960×540 420k/330k without audio, cards at 480 px wide 360k/270k with audio):
+
+```sh
+ffmpeg -i in.mp4 -vf scale=960:540 -c:v libx264 -preset slow -profile:v high -pix_fmt yuv420p -b:v 420k -maxrate 630k -bufsize 1260k -g 60 -pass 1 -an -f mp4 /dev/null
+ffmpeg -i in.mp4 -vf scale=960:540 -c:v libx264 -preset slow -profile:v high -pix_fmt yuv420p -b:v 420k -maxrate 630k -bufsize 1260k -g 60 -pass 2 -an -movflags +faststart hero.mp4
+ffmpeg -i in.mp4 -vf scale=960:540 -c:v libvpx-vp9 -b:v 330k -row-mt 1 -deadline good -cpu-used 1 -g 60 -pass 1 -an -f webm /dev/null
+ffmpeg -i in.mp4 -vf scale=960:540 -c:v libvpx-vp9 -b:v 330k -row-mt 1 -deadline good -cpu-used 1 -g 60 -pass 2 -an hero.webm
+ffmpeg -i in.mp4 -frames:v 1 -vf scale=960:540 -q:v 5 hero.jpg
+```
+
+On screens up to 767 px wide and whenever `prefers-reduced-motion: reduce` is set, the hero shows its poster instead of autoplaying, and Watch cards never start on hover; they still play from their explicit play button. Watch videos use `preload="none"`.
 
 ## Mainnet and verified interfaces
 
 [`web/src/config.ts`](web/src/config.ts) is the single application address/configuration file, including the exact hooked PoolKey, pool ID, LP NFT, relayer, reward tokens, NFT ranges and public RPC fallbacks. The assignment's mainnet addresses override the old pinned Sepolia inputs. Those old records are not loaded at runtime.
 
-All eleven ABI files were downloaded from verified Sourcify chain-1 contracts, including the actual deployed oracle. [`provenance.json`](web/src/abi/provenance.json) records URLs, verification matches and SHA-256 hashes. The standard ERC-20 getters for reward tokens reuse the verified ADAM ERC-20 interface. No ABI was derived from repository Solidity. Uniswap mainnet PositionManager and StateView addresses were checked against the [official deployment list](https://developers.uniswap.org/docs/protocols/v4/deployments).
+All eleven ABI files were downloaded from verified Sourcify chain-1 contracts, including the actual deployed oracle. [`provenance.json`](web/src/abi/provenance.json) records URLs, verification matches and SHA-256 hashes. The redesign did not change any ABI file.
 
 ```sh
 node web/scripts/verify-abis.mjs
@@ -35,26 +57,35 @@ cd web
 npx tsx scripts/read-check.ts
 ```
 
-`NODE_USE_ENV_PROXY=1` was used for network checks on this worker. The site has no API keys, private keys, privileged backend or swap widget. Wallet connection uses the injected EIP-1193 provider; WalletConnect is not configured. Transactions require chain 1, recheck the selected account, simulate first, request the visitor's signature and wait for a receipt. Exact approvals precede staking when needed. Errors, rejections, pending receipts, replacements and explorer links remain visible until dismissed. Real hardware-wallet signing and real transaction settlement were not exercised.
+The site has no API keys, private keys, privileged backend or swap widget. Wallet connection uses the injected EIP-1193 provider; WalletConnect is not configured. Transactions require chain 1, recheck the selected account, simulate first, request the visitor's signature and wait for a receipt. Exact approvals precede staking when needed. Errors, rejections, pending receipts, replacements and explorer links remain visible until dismissed. viem and the mainnet chain definition are loaded as a lazy chunk from `api.ts` so the first paint does not wait for them; the client and all read/write paths are otherwise unchanged.
 
 ## Interactions and data definitions
 
-- **Trading:** Uniswap is an external link. It may choose another route, so the page asks visitors to verify the official hooked pool. The contract table exposes the full PoolKey and addresses.
-- **Statistics:** ETH spot price comes from StateView's pool square-root price (both currencies have 18 decimals). USD price and USD liquidity come from DexScreener's exact mainnet pool, with market cap calculated as USD price × fixed 1B supply. Failed market requests show unavailable values. Mainnet reads are timestamped and refresh every minute; stale snapshots are labeled.
-- **Cumulative totals:** an explicit Load cumulative totals action scans every FeeTaken event from verified hook deployment block 26,128,644 through the displayed block, and all 3,178 NFT `claimed` mappings at one block. Incomplete requests never publish partial totals. Hook fees exclude unsolicited ETH donations. Larger histories may encounter public-RPC limits; retry rather than treating partial totals as complete. Rewards use `totalDistributed` and fetched token decimals. IMDSTR tokens and ETH budgets are displayed separately.
-- **NFTs:** all eligible IDs are checked with `ownerOf` through Multicall3 in 80-ID chunks, pinned to one block. Transport failures fail the scan; reverted ownerOf calls mean absent/burned IDs. Cancellation and account changes discard incomplete results. Share, prior claimed and claimable amounts are read from NFTClaim. Selected NFTs are batched in groups of up to 40 per collection, each requiring its own wallet confirmation. A partial sequence can be resumed after rescanning. Claim & Stake explicitly warns that the whole principal lock resets for 24 hours. The claim deadline and next daily unlock come from the deployed contract.
-- **Staking:** stake, unstake and exit use the deployed distributor. Principal controls follow `unlockTime`; rewards remain claimable while locked. IMD and PNKSTR have independent claim buttons. Direct IMDSTR rewards are shown when `directDistribution` is enabled; legacy ETH budget remains claimable too.
-- **IMDSTR quote:** `eth_call` simulates `claimIMDSTR` for the connected wallet with a positive test minimum. The result includes the actual distributor/pool path. User slippage is 0.1–10%, parsed in integer basis points; quotes expire after 60 seconds and reset on input/account/balance changes. Execution has a 10-minute deadline and is simulated again with the real minimum. Quote failure never enables an unprotected claim.
-- **Keepers:** process simulates current cooldown/work; claimKeeper always targets the connected wallet. Bounty is 0.5% of newly processed ETH, followed by the 90/10 staker/team split.
-- **Relayer:** visible only for the configured address. The API's `message` fields map to the deployed Attestation tuple, `uint256` maps to answerType 3, and the answer decodes as one of six rank codes. Preview includes weights, window, panel agreement and validity. The contract simulation verifies the actual signing domain/signature/replay rules. `submit(a, signature)` is checked both for a true simulation result and a SplitUpdated receipt event. A successful receipt alone does not prove report acceptance. The exact daily question has a copy control.
+- **Trading:** Uniswap is an external link (hero "Buy", footer). It may choose another route, so the page asks visitors to verify the official hooked pool. The contract table and footer expose the full PoolKey and addresses.
+- **Statistics:** ETH spot price comes from StateView's pool square-root price. USD price and USD liquidity come from DexScreener's exact mainnet pool, with market cap calculated as USD price × fixed 1B supply. Failed market requests show unavailable values. Mainnet reads are timestamped and refresh every minute; stale snapshots are labeled. Stat cards count up from zero the first time they scroll into view and then follow live values directly.
+- **Cumulative totals:** an explicit Load cumulative totals action scans every FeeTaken event from verified hook deployment block 26,128,644 through the displayed block, and all 3,178 NFT `claimed` mappings at one block. Incomplete requests never publish partial totals. Larger histories may exceed public-RPC limits; retry rather than treating partial totals as complete.
+- **NFTs:** all eligible IDs are checked with `ownerOf` through Multicall3 in 80-ID chunks, pinned to one block. Selected NFTs are batched in groups of up to 40 per collection, each requiring its own wallet confirmation. Claim & Stake warns that the whole principal lock resets for 24 hours.
+- **Staking:** stake, unstake and exit use the deployed distributor. Principal controls follow `unlockTime`; rewards remain claimable while locked. IMD and PNKSTR have independent claim buttons; direct IMDSTR rewards appear when `directDistribution` is enabled.
+- **IMDSTR quote:** `eth_call` simulates `claimIMDSTR` for the connected wallet. User slippage is 0.1–10%; quotes expire after 60 seconds and reset on input/account/balance changes. Execution has a 10-minute deadline and is simulated again with the real minimum.
+- **Keepers:** process simulates current cooldown/work; claimKeeper always targets the connected wallet.
+- **Relayer:** visible only for the configured address; fetch, preview, validation and submission are unchanged from the previous release.
 
 ## Validation results
 
-Production build and TypeScript checks passed. Eight logic/ABI tests passed. Chromium checked the production export under `/preview/`, with real read-only RPC/API responses, at 1440, 820, 390 and 320 CSS pixels: no page overflow, uncaught application errors or failed resources in the final run. Theme persistence, font loading, hash navigation, copy feedback, full cumulative reads and reduced motion passed. Separate mocked-wallet browser tests passed staking, withdrawal, rewards, quotes, both NFT claim paths, keeper flows, wrong-chain switching, rejection handling and relayer authorization/submission. The keyboard stake flow was also exercised.
+Commands run on the final source and export, all exit code 0 unless noted:
 
-The built-in browser connector failed with `Transport closed`; the installed Chromium/Playwright runner supplied the rendered checks instead. The live browser harness forwards public HTTPS requests through Node's configured proxy; it does not prove every gateway's CORS or wallet-injection behavior. No physical-device, screen-reader or native 200% zoom session was performed. See [six-domain review and evidence](docs/website/VALIDATION.md), [design system](DESIGN.md), and the machine-readable browser results alongside the screenshots.
+| Check | Result |
+| --- | --- |
+| `npm run typecheck --prefix web` | Passed |
+| `npm run test --prefix web` | 8 tests passed |
+| `npm run build --prefix web` | Passed; main chunk 333 kB (84.5 kB gzip), viem chunks loaded lazily |
+| `node web/scripts/interaction-check.mjs` (Playwright + Chromium, mocked wallet/RPC) | 16 checks passed: connect, chain switch, keyboard stake with exact approval, unstake, exit, IMD/PNKSTR claims, IMDSTR quote and claim, keeper process and bounty, full 3,178-ID NFT scan, Claim & Stake and claim batches, lock enforcement, wallet rejection, relayer gate/submit, no uncaught errors; 14 simulated writes, zero broadcasts |
+| `node web/scripts/browser-check.mjs` (Playwright + Chromium, live read-only RPC) | 21 checks passed: live snapshot, font, hero autoplay attributes and pause control, no overflow at 1440/900/390/320, poster on compact and reduced-motion, mobile menu, Watch hover play, sound toggle, keyboard play/pause, counted stat cards, hash navigation under `/preview/`, missing-wallet message, footer copy and six Etherscan links, sampled contrast ≥ 4.5:1, no uncaught errors. The optional cumulative-totals load did not finish within 150 s on the public RPCs during the run (recorded, feature unchanged). |
+| Lighthouse 12 mobile (emulated Moto G, slow 4G) on `dist/` | Final export: Performance 95, Accessibility 100, Best practices 100 with the local server sending gzip for HTML/JS/CSS (92–95 across runs); Performance 83 with text compression disabled (72–83 across runs, FCP 2.9 s, LCP 3.6 s). The hosting gateway should serve compressed text to keep the 85+ target with margin; the export is identical in both runs. Summary in `docs/website/lighthouse-mobile.json`. |
 
-The optional browser runners start and stop their own local static server. They accept a Playwright module and Chromium executable installed outside this repository:
+Screenshots of the final export are in `docs/website/` (`desktop.jpg`, `mobile.jpg`, `watch.jpg`, `keyboard-focus.jpg`) with machine-readable results in `browser-validation.json` and `interaction-validation.json`. No physical-device, screen-reader, Safari/Firefox or hardware-wallet session was performed; see [VALIDATION.md](docs/website/VALIDATION.md) for the six-domain review, findings and limitations.
+
+The browser runners start and stop their own local static server (serving `dist/` under `/preview/`). They accept a Playwright module and a Chromium executable installed outside this repository:
 
 ```sh
 PLAYWRIGHT_MODULE=/absolute/path/to/playwright-core/index.mjs \
@@ -66,26 +97,18 @@ CHROMIUM_EXECUTABLE=/absolute/path/to/chromium \
 node web/scripts/browser-check.mjs
 ```
 
-## Publish to IPFS
+## Publish
 
-Import the delivered CAR into an operator's persistent Kubo node. These commands upload only static files and do not interact with Ethereum:
+The committed `dist/` directory is the site. The IdentityMD publisher uploads it as the next version of `adam.site.identitymd.eth` / adam.sites.imd.fun; it does not rebuild, so rebuild and commit `dist/` after any source change. Any static host or IPFS gateway that serves the directory works because every URL is relative; serve HTML, JS and CSS with gzip or brotli for the best mobile performance.
 
-```sh
-ipfs dag import --pin-roots=true docs/website/adam-site.car
-ipfs pin ls bafybeihbhzlu3zx6s65nnqseitmd5d6fjsuqdyygv6dhwxdxjcrepdgoqe
-ipfs cat /ipfs/bafybeihbhzlu3zx6s65nnqseitmd5d6fjsuqdyygv6dhwxdxjcrepdgoqe/index.html
-```
-
-Keep that node online or upload the CAR to the operator's chosen pinning provider. Then verify `index.html`, JS, CSS, fonts and images through a public gateway at the CID URL above, including a reload with `#stake`. No pinning credential belongs in the frontend or repository. The CID identifies bytes; computing it does not establish hosting.
-
-To regenerate the CAR after rebuilding, install these optional tools in a temporary directory, outside the submission:
+To publish the same export to IPFS yourself, add the directory with Kubo (`ipfs add -r --cid-version 1 dist`) and pin the resulting CID, or run the optional packaging script with its tools installed in a temporary directory outside the submission:
 
 ```sh
 npm install --prefix /tmp/adam-ipfs-tools ipfs-unixfs-importer@16.1.4 @ipld/car@5.4.2 ipfs-unixfs-exporter@15.0.4
 IPFS_TOOLS_DIR=/tmp/adam-ipfs-tools node web/scripts/package-ipfs.mjs
 ```
 
-The packaging script verifies every block hash and re-imports every file to compare its bytes with `dist/`. It rewrites `docs/website/ipfs.json` and `adam-site.car`; a changed export has a changed CID. Update this README's CID when doing so.
+It writes `docs/website/ipfs.json` and `docs/website/adam-site.car`; those generated artifacts are not committed (the previous release's CAR was removed as stale packaging). Computing a CID does not establish hosting; keep a node online or use a pinning provider.
 
 ## Prior contract work
 
